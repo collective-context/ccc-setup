@@ -1,6 +1,6 @@
 #!/bin/bash
 ##########################################################
-# CC Commander Bootstrap Script
+# CCC Commander Bootstrap Script
 # GitHub: https://github.com/collective-context/ccc
 # 
 # Installation:
@@ -18,7 +18,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# CC Banner
+# CCC Banner
 echo -e "${GREEN}"
 cat << "EOF"
    ____      _ _           _   _              ____            _            _   
@@ -81,7 +81,7 @@ if [ ! -d "/root/ccc" ]; then
     
     # Repository klonen
     SOURCE=${CCC_REPO:-https://github.com/collective-context/ccc}
-    echo -e "${BLUE}[INFO]${NC} Lade CC Commander $TAG herunter..."
+    echo -e "${BLUE}[INFO]${NC} Lade CCC Commander $TAG herunter..."
     git clone \
         -b "$TAG" --depth 1 \
         "$SOURCE" \
@@ -97,7 +97,7 @@ cd /root/ccc || exit
 
 # Repository updaten wenn es schon existiert
 if [ "$TAG" != "$(git describe --tags 2>/dev/null || echo 'main')" ]; then
-    echo -e "${BLUE}[INFO]${NC} Update CC Commander auf $TAG..."
+    echo -e "${BLUE}[INFO]${NC} Update CCC Commander auf $TAG..."
     git fetch --depth 1 --force --prune origin tag "$TAG"
     if ! git checkout -q "$TAG"; then
         echo -e "${RED}[ERROR]${NC} Update fehlgeschlagen. Hast du lokale Änderungen in /root/ccc?"
@@ -114,5 +114,5 @@ SCRIPT_EOF
 chmod +x /usr/local/bin/ccc
 
 # Haupt-Setup starten
-echo -e "${GREEN}[START]${NC} Starte CC Commander Installation..."
+echo -e "${GREEN}[START]${NC} Starte CCC Commander Installation..."
 exec setup/start.sh
