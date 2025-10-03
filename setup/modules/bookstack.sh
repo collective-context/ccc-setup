@@ -1,0 +1,150 @@
+#!/bin/bash
+##########################################################
+# BookStack Installation - Strict CCC CODE Pattern
+# ALLE Daten in $STORAGE_ROOT/www/bookstack
+##########################################################
+
+source /etc/ccc.conf
+source /root/ccc/setup/functions.sh
+
+echo -e "${BLUE}[MODULE]${NC} BookStack Installation (CCC CODE Style)..."
+
+# BookStack Variablen - ALLES in Storage Root
+BOOKSTACK_DIR="$STORAGE_ROOT/www/bookstack"
+BOOKSTACK_DB_NAME="bookstack"
+BOOKSTACK_DB_USER="bookstack"
+BOOKSTACK_DB_PASS="${BOOKSTACK_DB_PASS:-$(openssl rand -base64 20)}"
+
+# BookStack spezifischen DB User erstellen
+mysql --user=root --password="$DB_ROOT_PASS" <<-EOSQL
+    CREATE DATABASE IF NOT EXISTS $BOOKSTACK_DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CREATE USER IF NOT EXISTS '$BOOKSTACK_DB_USER'@'localhost' IDENTIFIED BY '$BOOKSTACK_DB_PASS';
+    GRANT ALL PRIVILEGES ON $BOOKSTACK_DB_NAME.* TO '$BOOKSTACK_DB_USER'@'localhost';
+    FLUSH PRIVILEGES;
+EOSQL
+
+# PHP 8.3 Installation (idempotent)
+if ! command -v php8.3 &> /dev/null; then
+    log_info "Installiere PHP 8.3..."
+    add-apt-repository -y ppa:ondrej/php
+    apt-get update -qq
+    apt-get install -y -qq \
+        php8.3 php8.3-fpm php8.3-curl php8.3-mbstring php8.3-ldap \
+        php8.3-xml php8.3-zip php8.3-gd php8.3-mysql php8.3-tokenizer php8.3-bcmath
+fi
+
+# PHP-FPM Pool für BookStack (als Storage User)
+mkdir -p /etc/php/8.3/fpm/pool.d/
+cat > /etc/php/8.3/fpm/pool.d/bookstack.conf << PHPFPM
+[bookstack]
+user = $STORAGE_USER
+group = $STORAGE_USER
+listen = /var/run/php/php8.3-fpm-bookstack.sock
+listen.owner = www-data
+listen.group = www-data
+pm = dynamic
+pm.max_children = 5
+pm.start_servers = 2
+pm.min_spare_servers = 1
+pm.max_spare_servers = 3
+php_admin_value[upload_max_filesize] = 32M
+php_admin_value[post_max_size] = 32M
+PHPFPM
+
+systemctl enable php8.3-fpm
+systemctl start php8.3-fpm
+
+# Composer installieren (idempotent)
+if ! command -v composer &> /dev/null; then
+    log_info "Installiere Composer..."
+    EXPECTED_CHECKSUM="$(php -r 'copy("https://composer.github.io/installer.sig", "php://stdout");')"
+    php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+    ACTUAL_CHECKSUM="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
+    if [ "$EXPECTED_CHECKSUM" = "$ACTUAL_CHECKSUM" ]; then
+        php composer-setup.php --quiet
+        rm composer-setup.php
+        mv composer.phar /usr/local/bin/composer
+        chmod +x /usr/local/bin/composer
+    else
+        log_error "Composer Installer Checksum fehlgeschlagen"
+        exit 1
+    fi
+fi
+
+# BookStack Directory in Storage Root vorbereiten
+mkdir -p "$BOOKSTACK_DIR"
+chown -R "$STORAGE_USER:$STORAGE_USER" "$BOOKSTACK_DIR"
+
+# BookStack herunterladen oder updaten
+if [ ! -d "$BOOKSTACK_DIR/.git" ]; then
+    log_info "Lade BookStack herunter..."
+    sudo -u "$STORAGE_USER" git clone https://github.com/BookStackApp/BookStack.git --branch release --single-branch "$BOOKSTACK_DIR"
+else
+    log_info "BookStack existiert - Update durchführen..."
+    cd "$BOOKSTACK_DIR"
+    sudo -u "$STORAGE_USER" git fetch origin release
+    sudo -u "$STORAGE_USER" git reset --hard origin/release
+fi
+
+# Composer Abhängigkeiten installieren
+cd "$BOOKSTACK_DIR"
+log_info "Installiere PHP Abhängigkeiten..."
+sudo -u "$STORAGE_USER" export COMPOSER_ALLOW_SUPERUSER=1
+sudo -u "$STORAGE_USER" php /usr/local/bin/composer install --no-dev --no-plugins --no-scripts
+
+# Environment File erstellen/updaten
+if [ ! -f "$BOOKSTACK_DIR/.env" ]; then
+    log_info "Erstelle .env Konfiguration..."
+    sudo -u "$STORAGE_USER" cp "$BOOKSTACK_DIR/.env.example" "$BOOKSTACK_DIR/.env"
+fi
+
+# Environment Variablen setzen (idempotent)
+sudo -u "$STORAGE_USER" -- sh -c "cd '$BOOKSTACK_DIR' && \
+    sed -i 's|APP_URL=.*|APP_URL=https://'"$PRIMARY_HOSTNAME"'|' .env && \
+    sed -i 's/DB_DATABASE=.*/DB_DATABASE='"$BOOKSTACK_DB_NAME"'/' .env && \
+    sed -i 's/DB_USERNAME=.*/DB_USERNAME='"$BOOKSTACK_DB_USER"'/' .env && \
+    sed -i 's|DB_PASSWORD=.*|DB_PASSWORD='\"$BOOKSTACK_DB_PASS\"'|' .env"
+
+# Application Key generieren falls nicht vorhanden
+if ! grep -q '^APP_KEY=base64:' "$BOOKSTACK_DIR/.env"; then
+    log_info "Generiere Application Key..."
+    sudo -u "$STORAGE_USER" php "$BOOKSTACK_DIR/artisan" key:generate --force
+fi
+
+# Database Migrations ausführen
+log_info "Führe Database Migrations aus..."
+sudo -u "$STORAGE_USER" php "$BOOKSTACK_DIR/artisan" migrate --force
+
+# File Permissions setzen
+log_info "Setze Dateiberechtigungen..."
+chown -R "$STORAGE_USER:$STORAGE_USER" "$BOOKSTACK_DIR"
+find "$BOOKSTACK_DIR" -type f -exec chmod 664 {} \;
+find "$BOOKSTACK_DIR" -type d -exec chmod 775 {} \;
+chmod -R ug+rwx "$BOOKSTACK_DIR/storage" "$BOOKSTACK_DIR/bootstrap/cache"
+chmod 640 "$BOOKSTACK_DIR/.env"
+
+# Nginx Configuration für BookStack (in Storage Root)
+mkdir -p "$STORAGE_ROOT/nginx/conf.d"
+cat > "$STORAGE_ROOT/nginx/conf.d/bookstack.conf" << 'NGINXCONF'
+# BookStack Configuration - Auto-generated by CCC
+location / {
+    try_files $uri $uri/ /index.php?$query_string;
+}
+
+location ~ \.php$ {
+    include snippets/fastcgi-php.conf;
+    fastcgi_pass unix:/var/run/php/php8.3-fpm-bookstack.sock;
+    fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+    fastcgi_param DOCUMENT_ROOT $realpath_root;
+}
+
+location ~ /\.ht {
+    deny all;
+}
+NGINXCONF
+
+# BookStack DB Pass in Storage Root speichern
+echo "$BOOKSTACK_DB_PASS" > "$STORAGE_ROOT/mysql/bookstack-pass.txt"
+chmod 600 "$STORAGE_ROOT/mysql/bookstack-pass.txt"
+
+log_success "BookStack installation abgeschlossen (CCC CODE Style)"
