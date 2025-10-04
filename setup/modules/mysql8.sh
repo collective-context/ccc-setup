@@ -3,6 +3,7 @@
 # MySQL 8 Installation - Strict CCC CODE Pattern
 # ALLE Daten in $STORAGE_ROOT/mysql
 # setup/modules/mysql8.sh
+# Bei Ubuntu 24.04 (Noble) - Ohne externem MySQL Repo
 ##########################################################
 
 source /etc/ccc.conf
@@ -26,27 +27,20 @@ if [ -z "$DB_ROOT_PASS" ]; then
     fi
 fi
 
-# MySQL Repository hinzufügen (nur bei erster Installation)
-if [ ! -f /etc/apt/sources.list.d/mysql.list ] && ! command -v mysql &> /dev/null; then
-    log_info "Füge MySQL Repository hinzu..."
-    wget -O /tmp/mysql-apt-config.deb https://dev.mysql.com/get/mysql-apt-config_0.8.29-1_all.deb
-    dpkg -i /tmp/mysql-apt-config.deb || apt-get install -f -y
-    rm -f /tmp/mysql-apt-config.deb
-    apt-get update -qq
-fi
-
-# MySQL Server installieren falls nicht vorhanden
+# MySQL Server installieren falls nicht vorhanden - Ubuntu 24.04 verwendet system repo
 if ! command -v mysql &> /dev/null; then
-    log_info "Installiere MySQL Server..."
+    log_info "Installiere MySQL Server aus Ubuntu Repositorys..."
     
-    # Non-interactive Installation
-    debconf-set-selections <<< "mysql-community-server mysql-community-server/root-pass password $DB_ROOT_PASS"
-    debconf-set-selections <<< "mysql-community-server mysql-community-server/re-root-pass password $DB_ROOT_PASS"
+    # Ubuntu 24.04 hat mysql-server-8.0 in den offiziellen Repos
+    apt-get update -qq
+    
+    # Non-interactive Installation für Ubuntu 24.04
+    debconf-set-selections <<< "mysql-server mysql-server/root-pass password $DB_ROOT_PASS"
+    debconf-set-selections <<< "mysql-server mysql-server/re-root-pass password $DB_ROOT_PASS"
     
     DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-        mysql-server \
-        mysql-client \
-        mysql-common
+        mysql-server-8.0 \
+        mysql-client-8.0
     
     if [ $? -ne 0 ]; then
         log_error "MySQL Installation fehlgeschlagen"
