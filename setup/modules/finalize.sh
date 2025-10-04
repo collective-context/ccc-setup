@@ -2,6 +2,7 @@
 ##########################################################
 # Finale Konfiguration - CCC CODE Pattern
 # Abschließende Setup-Schritte
+# setup/modules/finalize.sh
 ##########################################################
 
 source /etc/ccc.conf
