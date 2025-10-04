@@ -1,14 +1,14 @@
 #!/bin/bash
 ##########################################################
 # MySQL 8 Installation - Strict CCC CODE Pattern
-# OPTIMIERT für Ubuntu 24.04 - Verbesserte Berechtigungen
+# OPTIMIERT für Ubuntu 24.04 - Mit korrekter Initialisierung
 # setup/modules/mysql8.sh
 ##########################################################
 
 source /etc/ccc.conf
 source /root/ccc/setup/functions.sh
 
-echo -e "${BLUE}[MODULE]${NC} MySQL 8 Installation (CCC CODE Style - Optimierte Berechtigungen)..."
+echo -e "${BLUE}[MODULE]${NC} MySQL 8 Installation (CCC CODE Style - Mit Initialisierung)..."
 
 # MySQL Data Directory in Storage Root
 MYSQL_DATA_DIR="$STORAGE_ROOT/mysql"
@@ -19,7 +19,7 @@ if [ -z "$DB_ROOT_PASS" ]; then
     DB_ROOT_PASS=$(openssl rand -base64 32)
     mkdir -p "$STORAGE_ROOT/mysql"
     echo "$DB_ROOT_PASS" > "$STORAGE_ROOT/mysql/root-pass.txt"
-    chmod 660 "$STORAGE_ROOT/mysql/root-pass.txt"  # 660 für ccc-data:mysql
+    chmod 660 "$STORAGE_ROOT/mysql/root-pass.txt"
     log_info "MySQL Root-Passwort generiert und gespeichert"
 fi
 
@@ -28,32 +28,14 @@ log_info "Bereite Verzeichnisstruktur mit optimierten Berechtigungen vor..."
 mkdir -p "$MYSQL_DATA_DIR"
 mkdir -p "$MYSQL_RUN_DIR"
 
-# OPTIMIERT: ccc-data:mysql mit 770 Berechtigungen
-chown -R ccc-data:mysql "$MYSQL_DATA_DIR"
-chmod -R 770 "$MYSQL_DATA_DIR"
-
-# Run Directory bleibt bei mysql:mysql für Service-Kompatibilität
-chown -R mysql:mysql "$MYSQL_RUN_DIR"
-chmod 755 "$MYSQL_RUN_DIR"
-
-# Alte Flag-Dateien entfernen
-rm -f "$MYSQL_DATA_DIR/debian-5.7.flag"
+# ccc-data zur mysql Gruppe hinzufügen für Backup-Zugriff
+if id "ccc-data" &>/dev/null; then
+    usermod -a -G mysql ccc-data 2>/dev/null || true
+    log_info "ccc-data zur mysql Gruppe hinzugefügt"
+fi
 
 # Schritt 2: MySQL aus Ubuntu Repository installieren
 log_info "Installiere MySQL Server aus Ubuntu Repositorys..."
-
-# MySQL Benutzer und Gruppe sicherstellen
-if ! id "mysql" &>/dev/null; then
-    log_info "Erstelle mysql Benutzer..."
-    groupadd -r mysql 2>/dev/null || true
-    useradd -r -g mysql -s /bin/false -d /nonexistent mysql 2>/dev/null || true
-fi
-
-# ccc-data zur mysql Gruppe hinzufügen für Backup-Zugriff
-if id "ccc-data" &>/dev/null; then
-    usermod -a -G mysql ccc-data
-    log_info "ccc-data zur mysql Gruppe hinzugefügt"
-fi
 
 # Non-interactive Installation
 debconf-set-selections <<< "mysql-server mysql-server/root-pass password $DB_ROOT_PASS"
@@ -76,6 +58,15 @@ log_info "Stoppe MySQL für Konfiguration..."
 systemctl stop mysql 2>/dev/null || true
 sleep 3
 
+# Prüfen ob MySQL-Systemdatenbank existiert
+MYSQL_INITIALIZED=false
+if [ -d "$MYSQL_DATA_DIR/mysql" ] && [ -f "$MYSQL_DATA_DIR/ibdata1" ]; then
+    log_info "MySQL-Systemdatenbank wurde bereits initialisiert"
+    MYSQL_INITIALIZED=true
+else
+    log_info "MySQL-Systemdatenbank muss initialisiert werden"
+fi
+
 # Prüfen ob Daten in /var/lib/mysql existieren und migrieren
 if [ -d "/var/lib/mysql" ] && [ ! -L "/var/lib/mysql" ] && [ -n "$(ls -A /var/lib/mysql 2>/dev/null)" ]; then
     log_info "Migriere MySQL-Daten nach $MYSQL_DATA_DIR"
@@ -84,15 +75,16 @@ if [ -d "/var/lib/mysql" ] && [ ! -L "/var/lib/mysql" ] && [ -n "$(ls -A /var/li
     systemctl stop mysql 2>/dev/null || true
     sleep 5
     
-    # Daten migrieren mit korrekten Berechtigungen
+    # Alte Daten entfernen falls vorhanden
+    rm -rf "$MYSQL_DATA_DIR"/*
+    
+    # Daten migrieren
     rsync -av /var/lib/mysql/ "$MYSQL_DATA_DIR/" || {
         log_error "Datenmigration fehlgeschlagen"
         exit 1
     }
     
-    # Berechtigungen auf migrierte Daten setzen
-    chown -R ccc-data:mysql "$MYSQL_DATA_DIR"
-    chmod -R 770 "$MYSQL_DATA_DIR"
+    MYSQL_INITIALIZED=true
     
     # Original-Daten sichern
     mv /var/lib/mysql /var/lib/mysql.backup.$(date +%Y%m%d_%H%M%S)
@@ -103,7 +95,57 @@ log_info "Erstelle Symlink-Struktur..."
 rm -rf /var/lib/mysql  # Falls leeres Verzeichnis existiert
 ln -sf "$MYSQL_DATA_DIR" /var/lib/mysql
 
-# Schritt 4: Konfiguration anpassen
+# Schritt 4: MySQL Initialisierung falls nötig
+if [ "$MYSQL_INITIALIZED" = false ]; then
+    log_info "Initialisiere MySQL Data Directory..."
+    
+    # TEMPORÄR: Berechtigungen für Initialisierung auf mysql:mysql setzen
+    chown -R mysql:mysql "$MYSQL_DATA_DIR"
+    chmod 750 "$MYSQL_DATA_DIR"
+    
+    # Run Directory Berechtigungen
+    chown -R mysql:mysql "$MYSQL_RUN_DIR"
+    chmod 755 "$MYSQL_RUN_DIR"
+    
+    # MySQL Data Directory initialisieren
+    log_info "Führe mysqld --initialize aus..."
+    mysqld --initialize-insecure --user=mysql --datadir="$MYSQL_DATA_DIR"
+    
+    if [ $? -eq 0 ]; then
+        log_success "MySQL Initialisierung erfolgreich"
+        MYSQL_INITIALIZED=true
+    else
+        log_error "MySQL Initialisierung fehlgeschlagen"
+        # Versuche es mit secure initialization
+        log_info "Versuche secure initialization..."
+        mysqld --initialize --user=mysql --datadir="$MYSQL_DATA_DIR" 2>/tmp/mysql-init.log
+        
+        if [ $? -eq 0 ]; then
+            log_success "MySQL Secure Initialisierung erfolgreich"
+            MYSQL_INITIALIZED=true
+            # Temporäres Root-Passwort aus Log extrahieren
+            TEMP_ROOT_PASS=$(grep "A temporary password" /tmp/mysql-init.log | awk '{print $NF}')
+            if [ -n "$TEMP_ROOT_PASS" ]; then
+                log_info "Temporäres Root-Passwort: $TEMP_ROOT_PASS"
+            fi
+        else
+            log_error "MySQL Initialisierung komplett fehlgeschlagen"
+            cat /tmp/mysql-init.log
+            exit 1
+        fi
+    fi
+fi
+
+# Schritt 5: Optimierte Berechtigungen setzen
+log_info "Setze optimierte Berechtigungen (ccc-data:mysql)..."
+chown -R ccc-data:mysql "$MYSQL_DATA_DIR"
+chmod -R 770 "$MYSQL_DATA_DIR"
+
+# Wichtige MySQL-Dateien mit speziellen Berechtigungen
+find "$MYSQL_DATA_DIR" -name "*.pem" -exec chmod 600 {} \; 2>/dev/null || true
+find "$MYSQL_DATA_DIR" -name "*.key" -exec chmod 600 {} \; 2>/dev/null || true
+
+# Schritt 6: Konfiguration anpassen
 log_info "Konfiguriere MySQL..."
 
 # Custom Konfiguration
@@ -132,7 +174,7 @@ socket = /var/run/mysqld/mysqld.sock
 default-character-set = utf8mb4
 MYSQLCCC
 
-# Schritt 5: AppArmor anpassen
+# Schritt 7: AppArmor anpassen
 log_info "Passe AppArmor an..."
 if [ -d "/etc/apparmor.d" ] && [ -f "/etc/apparmor.d/usr.sbin.mysqld" ]; then
     # AppArmor-Profil für MySQL anpassen
@@ -145,35 +187,14 @@ if [ -d "/etc/apparmor.d" ] && [ -f "/etc/apparmor.d/usr.sbin.mysqld" ]; then
     log_success "AppArmor angepasst"
 fi
 
-# Schritt 6: MySQL Service starten
+# Schritt 8: MySQL Service starten
 log_info "Starte MySQL Service..."
 systemctl daemon-reload
 systemctl enable mysql
 
-# MySQL initialisieren falls Data Directory leer ist
-if [ -z "$(ls -A "$MYSQL_DATA_DIR")" ]; then
-    log_info "Initialisiere MySQL Data Directory..."
-    
-    # MySQL sicher stoppen
-    systemctl stop mysql 2>/dev/null || true
-    sleep 3
-    
-    # TEMPORÄR: Berechtigungen für Initialisierung auf mysql:mysql setzen
-    chown -R mysql:mysql "$MYSQL_DATA_DIR"
-    chmod 750 "$MYSQL_DATA_DIR"
-    
-    # Data Directory initialisieren
-    mysqld --initialize-insecure --user=mysql --datadir="$MYSQL_DATA_DIR"
-    
-    # NACH Initialisierung: Optimierte Berechtigungen setzen
-    chown -R ccc-data:mysql "$MYSQL_DATA_DIR"
-    chmod -R 770 "$MYSQL_DATA_DIR"
-    
-    log_success "MySQL Data Directory initialisiert mit optimierten Berechtigungen"
-fi
-
 # MySQL starten mit Retry
-for attempt in {1..3}; do
+for attempt in {1..5}; do
+    log_info "Startversuch $attempt von 5..."
     systemctl start mysql
     
     sleep 5
@@ -184,14 +205,20 @@ for attempt in {1..3}; do
         log_warning "MySQL Start Versuch $attempt fehlgeschlagen"
         
         # Debug-Informationen
-        log_info "Berechtigungen prüfen:"
-        ls -la "$MYSQL_DATA_DIR" | head -5
+        log_info "Prüfe MySQL Logs:"
+        journalctl -u mysql --no-pager -n 10
         
-        if [ $attempt -eq 3 ]; then
-            log_error "MySQL konnte nicht gestartet werden"
-            journalctl -u mysql --no-pager -n 20
+        if [ $attempt -eq 5 ]; then
+            log_error "MySQL konnte nach 5 Versuchen nicht gestartet werden"
+            log_info "Letzte Berechtigungen:"
+            ls -la "$MYSQL_DATA_DIR" | head -10
+            log_info "Prüfe ob MySQL-Datenbank existiert:"
+            ls -la "$MYSQL_DATA_DIR/mysql" 2>/dev/null | head -5 || echo "MySQL-Datenbank nicht gefunden"
             exit 1
         fi
+        
+        # Vor nächstem Versuch stoppen
+        systemctl stop mysql 2>/dev/null
         sleep 3
     fi
 done
@@ -200,41 +227,62 @@ done
 log_info "Warte auf MySQL Verfügbarkeit..."
 for i in {1..30}; do
     if mysqladmin ping -h localhost --silent 2>/dev/null; then
-        log_success "MySQL ist bereit"
+        log_success "MySQL ist bereit und akzeptiert Verbindungen"
         break
+    else
+        if [ $i -eq 30 ]; then
+            log_warning "MySQL antwortet nicht nach 60 Sekunden, aber fahre fort..."
+            break
+        fi
     fi
     sleep 2
 done
 
-# Schritt 7: Root Passwort setzen (falls bei Initialisierung gesetzt)
-if mysql -uroot -e "SELECT 1;" &>/dev/null 2>/dev/null; then
-    log_info "Setze MySQL Root-Passwort..."
-    mysql -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_ROOT_PASS'; FLUSH PRIVILEGES;" 2>/dev/null || {
-        log_warning "Konnte root Passwort nicht setzen - verwende vorhandenes"
-    }
+# Schritt 9: Root Passwort setzen
+log_info "Setze MySQL Root-Passwort..."
+
+# Prüfen ob wir ohne Passwort verbinden können
+if mysql -uroot -e "SELECT 1;" 2>/dev/null; then
+    log_info "Setze Root-Passwort (ohne aktuelles Passwort)..."
+    mysql -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_ROOT_PASS'; FLUSH PRIVILEGES;"
+elif [ -n "$TEMP_ROOT_PASS" ]; then
+    log_info "Setze Root-Passwort (mit temporärem Passwort)..."
+    mysql -uroot -p"$TEMP_ROOT_PASS" --connect-expired-password -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_ROOT_PASS'; FLUSH PRIVILEGES;"
+else
+    # Versuche mit unserem gespeicherten Passwort
+    log_info "Versuche Verbindung mit gespeichertem Root-Passwort..."
+    if mysql -uroot -p"$DB_ROOT_PASS" -e "SELECT 1;" 2>/dev/null; then
+        log_success "Root-Passwort war bereits korrekt gesetzt"
+    else
+        log_warning "Konnte Root-Passwort nicht setzen - manuelle Intervention nötig"
+    fi
 fi
 
-# Schritt 8: Datenbanken und Benutzer einrichten
+# Schritt 10: Datenbanken und Benutzer einrichten
 log_info "Richte Datenbanken und Benutzer ein..."
 
-# MySQL Secure Installation
-mysql -uroot -p"$DB_ROOT_PASS" <<-EOSQL 2>/dev/null
-    DELETE FROM mysql.user WHERE User='' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
-    DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
-    DROP DATABASE IF EXISTS test;
-    DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
-    FLUSH PRIVILEGES;
+if mysql -uroot -p"$DB_ROOT_PASS" -e "SELECT 1;" 2>/dev/null; then
+    # MySQL Secure Installation
+    mysql -uroot -p"$DB_ROOT_PASS" <<-EOSQL
+        DELETE FROM mysql.user WHERE User='' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+        DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+        DROP DATABASE IF EXISTS test;
+        DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+        FLUSH PRIVILEGES;
 EOSQL
 
-# Ghost Database erstellen
-mysql -uroot -p"$DB_ROOT_PASS" <<-EOSQL
-    CREATE DATABASE IF NOT EXISTS $DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-    CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
-    GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';
-    FLUSH PRIVILEGES;
+    # Ghost Database erstellen
+    mysql -uroot -p"$DB_ROOT_PASS" <<-EOSQL
+        CREATE DATABASE IF NOT EXISTS $DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+        CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
+        GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';
+        FLUSH PRIVILEGES;
 EOSQL
+else
+    log_warning "Konnte keine Verbindung zu MySQL herstellen - überspringe Datenbank-Erstellung"
+fi
 
-# Schritt 9: Finale Konfiguration
+# Schritt 11: Finale Konfiguration
 log_info "Finalisiere Installation..."
 
 # Root Password in ccc.conf speichern
@@ -242,18 +290,13 @@ if ! grep -q "DB_ROOT_PASS" /etc/ccc.conf; then
     echo "DB_ROOT_PASS=$DB_ROOT_PASS" >> /etc/ccc.conf
 fi
 
-# Berechtigungen final prüfen und anpassen
-log_info "Finalisiere Berechtigungen..."
-find "$MYSQL_DATA_DIR" -type f -name "*.cnf" -exec chmod 660 {} \;
-find "$MYSQL_DATA_DIR" -type f -name "*.pem" -exec chmod 600 {} \;
-
 # Markiere Installation als abgeschlossen
 touch "$MYSQL_DATA_DIR/mysql.installed"
 chown ccc-data:mysql "$MYSQL_DATA_DIR/mysql.installed"
 chmod 660 "$MYSQL_DATA_DIR/mysql.installed"
 
 # Health Check
-if mysql -uroot -p"$DB_ROOT_PASS" -e "SELECT 1;" &>/dev/null; then
+if mysql -uroot -p"$DB_ROOT_PASS" -e "SELECT 1;" 2>/dev/null; then
     log_success "✅ MySQL 8 Installation erfolgreich abgeschlossen"
     log_info "📊 MySQL Data: $MYSQL_DATA_DIR"
     log_info "👤 Besitzer: ccc-data:mysql"
@@ -266,5 +309,9 @@ if mysql -uroot -p"$DB_ROOT_PASS" -e "SELECT 1;" &>/dev/null; then
     ls -la "$MYSQL_DATA_DIR" | head -10
 else
     log_error "❌ MySQL Health Check fehlgeschlagen"
+    log_info "⚠️  Bitte prüfen Sie:"
+    log_info "   - MySQL Logs: journalctl -u mysql"
+    log_info "   - Berechtigungen: ls -la $MYSQL_DATA_DIR"
+    log_info "   - AppArmor Status: aa-status | grep mysql"
     exit 1
 fi
