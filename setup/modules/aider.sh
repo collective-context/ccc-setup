@@ -2,6 +2,7 @@
 ##########################################################
 # Aider Installation - CCC CODE Pattern
 # AI Coding Assistant mit OpenRouter Integration
+# setup/modules/aider.sh
 ##########################################################
 
 source /etc/ccc.conf
