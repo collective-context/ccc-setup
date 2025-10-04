@@ -2,6 +2,7 @@
 ##########################################################
 # MySQL 8 Installation - Strict CCC CODE Pattern
 # ALLE Daten in $STORAGE_ROOT/mysql
+# setup/modules/mysql8.sh
 ##########################################################
 
 source /etc/ccc.conf
