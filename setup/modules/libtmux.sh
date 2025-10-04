@@ -2,6 +2,7 @@
 ##########################################################
 # libtmux Installation - CCC CODE Pattern
 # Python ORM für tmux Terminal Control
+# setup/modules/libtmux.sh
 ##########################################################
 
 source /etc/ccc.conf
