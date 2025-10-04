@@ -1,6 +1,6 @@
 #!/bin/bash
 ##########################################################
-# CCC Commander Bootstrap Script
+# CCC Commander Bootstrap Script # /setup.sh
 # GitHub: https://github.com/collective-context/ccc-setup/
 # 
 # Installation:
