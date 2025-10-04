@@ -47,4 +47,26 @@ for port in 80 443 22; do
     fi
 done
 
+# Whiptail für Terminal-Dialoge installieren
+echo -e "${GREEN}Installiere Terminal-Dialog-Tools...${NC}"
+if ! command -v whiptail &> /dev/null; then
+    apt-get update > /dev/null 2>&1
+    apt-get install -y whiptail dialog > /dev/null 2>&1
+    
+    if [ $? -eq 0 ]; then
+        log_success "Whiptail installiert - OK"
+    else
+        log_warning "Whiptail konnte nicht installiert werden - verwende Text-Modus"
+    fi
+else
+    log_success "Whiptail bereits installiert - OK"
+fi
+
+# Final Check ob whiptail verfügbar ist
+if ! command -v whiptail &> /dev/null; then
+    log_warning "Whiptail nicht verfügbar - Installation verwendet Text-Modus"
+else
+    log_success "Terminal-Dialoge verfügbar - OK"
+fi
+
 log_success "Preflight Checks abgeschlossen"
