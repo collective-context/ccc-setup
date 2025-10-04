@@ -30,10 +30,21 @@ source preflight.sh
 # Konfigurationsdatei checken (zweiter Durchlauf)
 if [ -f /etc/ccc.conf ]; then
     echo -e "${BLUE}[INFO]${NC} Existierende Installation gefunden. Update-Modus..."
-    # Vorherige Konfiguration laden
-    cat /etc/ccc.conf | sed 's/^/DEFAULT_/' > /tmp/ccc.prev.conf
-    source /tmp/ccc.prev.conf
-    rm -f /tmp/ccc.prev.conf
+    
+    # Vorherige Konfiguration sicher laden (nur Variablen, keine Kommentare)
+    if grep -E '^[A-Za-z_][A-Za-z0-9_]*=' /etc/ccc.conf > /tmp/ccc.prev.conf 2>/dev/null; then
+        while IFS='=' read -r key value; do
+            # Sicherstellen dass es eine gültige Variable ist
+            if [[ $key =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+                eval "DEFAULT_$key=\"$value\""
+                export "DEFAULT_$key"
+            fi
+        done < /tmp/ccc.prev.conf
+        rm -f /tmp/ccc.prev.conf
+    else
+        echo -e "${YELLOW}[WARN]${NC} Konfigurationsdatei konnte nicht geladen werden"
+    fi
+    
     UPDATE_MODE=1
 else
     echo -e "${BLUE}[INFO]${NC} Neue Installation..."
