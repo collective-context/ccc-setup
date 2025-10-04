@@ -1,26 +1,49 @@
 #!/bin/bash
 ##########################################################
 # MySQL 8 Installation - Strict CCC CODE Pattern
-# OPTIMIERT für Ubuntu 24.04 - Mit korrekter Initialisierung
+# OPTIMIERT für Ubuntu 24.04 - Mit Passwort-Validation
 # setup/modules/mysql8.sh
 ##########################################################
 
 source /etc/ccc.conf
 source /root/ccc/setup/functions.sh
 
-echo -e "${BLUE}[MODULE]${NC} MySQL 8 Installation (CCC CODE Style - Mit Initialisierung)..."
+echo -e "${BLUE}[MODULE]${NC} MySQL 8 Installation (CCC CODE Style - Mit Passwort-Validation)..."
 
 # MySQL Data Directory in Storage Root
 MYSQL_DATA_DIR="$STORAGE_ROOT/mysql"
 MYSQL_RUN_DIR="/var/run/mysqld"
 
-# MySQL Root Password setzen
+# MySQL Root Password setzen/lesen
 if [ -z "$DB_ROOT_PASS" ]; then
-    DB_ROOT_PASS=$(openssl rand -base64 32)
-    mkdir -p "$STORAGE_ROOT/mysql"
-    echo "$DB_ROOT_PASS" > "$STORAGE_ROOT/mysql/root-pass.txt"
-    chmod 660 "$STORAGE_ROOT/mysql/root-pass.txt"
-    log_info "MySQL Root-Passwort generiert und gespeichert"
+    if [ -f "$STORAGE_ROOT/mysql/root-pass.txt" ]; then
+        DB_ROOT_PASS=$(cat "$STORAGE_ROOT/mysql/root-pass.txt")
+    else
+        DB_ROOT_PASS=$(openssl rand -base64 32)
+        mkdir -p "$STORAGE_ROOT/mysql"
+        echo "$DB_ROOT_PASS" > "$STORAGE_ROOT/mysql/root-pass.txt"
+        chmod 660 "$STORAGE_ROOT/mysql/root-pass.txt"
+        log_info "MySQL Root-Passwort generiert und gespeichert"
+    fi
+fi
+
+# Schritt 0: PRÜFE OB PASSWORT BEREITS FUNKTIONIERT
+log_info "Prüfe ob MySQL Root-Passwort bereits funktioniert..."
+if mysql -uroot -p"$DB_ROOT_PASS" -e "SELECT 1;" 2>/dev/null; then
+    log_success "✅ MySQL Root-Passwort ist KORREKT - keine Änderungen nötig"
+    
+    # Nur Health Check durchführen
+    if mysql -uroot -p"$DB_ROOT_PASS" -e "SELECT 1;" &>/dev/null; then
+        log_success "✅ MySQL ist betriebsbereit"
+        log_info "📊 MySQL Data: $MYSQL_DATA_DIR"
+        log_info "🔌 MySQL Socket: /var/run/mysqld/mysqld.sock"
+        log_info "🐬 MySQL Version: $(mysql --version)"
+        exit 0
+    else
+        log_warning "⚠️  Passwort stimmt, aber Health Check fehlgeschlagen"
+    fi
+else
+    log_warning "MySQL Root-Passwort funktioniert nicht - fahre fort mit Installation..."
 fi
 
 # Schritt 1: Verzeichnisstruktur mit optimierten Berechtigungen vorbereiten
@@ -274,46 +297,52 @@ for i in {1..30}; do
     sleep 2
 done
 
-# Schritt 9: Root Passwort setzen
-log_info "Setze MySQL Root-Passwort..."
-
-# Prüfen ob wir ohne Passwort verbinden können
-if mysql -uroot -e "SELECT 1;" 2>/dev/null; then
-    log_info "Setze Root-Passwort (ohne aktuelles Passwort)..."
-    mysql -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_ROOT_PASS'; FLUSH PRIVILEGES;"
-elif [ -n "$TEMP_ROOT_PASS" ]; then
-    log_info "Setze Root-Passwort (mit temporärem Passwort)..."
-    mysql -uroot -p"$TEMP_ROOT_PASS" --connect-expired-password -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_ROOT_PASS'; FLUSH PRIVILEGES;"
+# Schritt 9: Root Passwort NUR SETZEN WENN ES NOCH NICHT FUNKTIONIERT
+log_info "Prüfe erneut ob MySQL Root-Passwort funktioniert..."
+if mysql -uroot -p"$DB_ROOT_PASS" -e "SELECT 1;" 2>/dev/null; then
+    log_success "✅ MySQL Root-Passwort ist KORREKT - keine Änderungen nötig"
 else
-    # Versuche mit unserem gespeicherten Passwort
-    log_info "Versuche Verbindung mit gespeichertem Root-Passwort..."
-    if mysql -uroot -p"$DB_ROOT_PASS" -e "SELECT 1;" 2>/dev/null; then
-        log_success "Root-Passwort war bereits korrekt gesetzt"
+    log_warning "MySQL Root-Passwort funktioniert nicht - setze es jetzt..."
+    
+    # Prüfen ob wir ohne Passwort verbinden können
+    if mysql -uroot -e "SELECT 1;" 2>/dev/null; then
+        log_info "Setze Root-Passwort (ohne aktuelles Passwort)..."
+        mysql -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_ROOT_PASS'; FLUSH PRIVILEGES;"
+    elif [ -n "$TEMP_ROOT_PASS" ]; then
+        log_info "Setze Root-Passwort (mit temporärem Passwort)..."
+        mysql -uroot -p"$TEMP_ROOT_PASS" --connect-expired-password -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_ROOT_PASS'; FLUSH PRIVILEGES;"
     else
         log_warning "Konnte Root-Passwort nicht setzen - manuelle Intervention nötig"
     fi
 fi
 
-# Schritt 10: Datenbanken und Benutzer einrichten
-log_info "Richte Datenbanken und Benutzer ein..."
+# Schritt 10: Datenbanken und Benutzer NUR EINRICHTEN WENN NOCH NICHT VORHANDEN
+log_info "Prüfe ob Datenbank-Initialisierung benötigt wird..."
 
 if mysql -uroot -p"$DB_ROOT_PASS" -e "SELECT 1;" 2>/dev/null; then
-    # MySQL Secure Installation
-    mysql -uroot -p"$DB_ROOT_PASS" <<-EOSQL
-        DELETE FROM mysql.user WHERE User='' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
-        DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
-        DROP DATABASE IF EXISTS test;
-        DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
-        FLUSH PRIVILEGES;
+    # Prüfe ob die Datenbank bereits existiert
+    if mysql -uroot -p"$DB_ROOT_PASS" -e "USE $DB_NAME;" 2>/dev/null; then
+        log_info "Datenbank $DB_NAME existiert bereits - überspringe Erstellung"
+    else
+        log_info "Richte Datenbanken und Benutzer ein..."
+        
+        # MySQL Secure Installation
+        mysql -uroot -p"$DB_ROOT_PASS" <<-EOSQL
+            DELETE FROM mysql.user WHERE User='' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+            DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+            DROP DATABASE IF EXISTS test;
+            DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+            FLUSH PRIVILEGES;
 EOSQL
 
-    # Ghost Database erstellen
-    mysql -uroot -p"$DB_ROOT_PASS" <<-EOSQL
-        CREATE DATABASE IF NOT EXISTS $DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-        CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
-        GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';
-        FLUSH PRIVILEGES;
+        # Ghost Database erstellen
+        mysql -uroot -p"$DB_ROOT_PASS" <<-EOSQL
+            CREATE DATABASE IF NOT EXISTS $DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+            CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
+            GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';
+            FLUSH PRIVILEGES;
 EOSQL
+    fi
 else
     log_warning "Konnte keine Verbindung zu MySQL herstellen - überspringe Datenbank-Erstellung"
 fi
@@ -339,10 +368,6 @@ if mysql -uroot -p"$DB_ROOT_PASS" -e "SELECT 1;" 2>/dev/null; then
     log_info "🔒 Berechtigungen: 770"
     log_info "🔌 MySQL Socket: /var/run/mysqld/mysqld.sock"
     log_info "🐬 MySQL Version: $(mysql --version)"
-    
-    # Berechtigungs-Info
-    echo -e "${GREEN}Berechtigungsstruktur:${NC}"
-    ls -la "$MYSQL_DATA_DIR" | head -10
 else
     log_error "❌ MySQL Health Check fehlgeschlagen"
     log_info "⚠️  Bitte prüfen Sie:"
