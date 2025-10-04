@@ -1,6 +1,7 @@
 #!/bin/bash
 ##########################################################
 # CCC Commander Hilfsfunktionen | CCC CODE
+# setup/functions.sh
 ##########################################################
 
 # Farben
