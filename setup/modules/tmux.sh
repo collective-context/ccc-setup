@@ -2,6 +2,7 @@
 ##########################################################
 # TMUX Installation - CCC CODE Pattern
 # Terminal Multiplexer mit optimierter Konfiguration
+# setup/modules/tmux.sh
 ##########################################################
 
 source /etc/ccc.conf
