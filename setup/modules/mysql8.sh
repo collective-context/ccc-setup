@@ -39,14 +39,6 @@ fi
 if ! command -v mysql &> /dev/null; then
     log_info "Installiere MySQL Server..."
     
-    # MySQL Data Directory vorbereiten
-    mkdir -p "$MYSQL_DATA_DIR"
-    chown mysql:mysql "$MYSQL_DATA_DIR"
-    
-    # Run Directory erstellen
-    mkdir -p "$MYSQL_RUN_DIR"
-    chown mysql:mysql "$MYSQL_RUN_DIR"
-    
     # Non-interactive Installation
     debconf-set-selections <<< "mysql-community-server mysql-community-server/root-pass password $DB_ROOT_PASS"
     debconf-set-selections <<< "mysql-community-server mysql-community-server/re-root-pass password $DB_ROOT_PASS"
@@ -64,24 +56,32 @@ else
     log_info "MySQL ist bereits installiert"
 fi
 
+# MySQL stoppen bevor wir Konfiguration ändern
+log_info "Stoppe MySQL für Konfiguration..."
+systemctl stop mysql 2>/dev/null || true
+sleep 3
+
 # MySQL Data Directory in unserer Storage Root sicherstellen
 if [ ! -f "$MYSQL_DATA_DIR/mysql.installed" ]; then
     log_info "Konfiguriere MySQL Data Directory..."
     
-    # MySQL stoppen
-    systemctl stop mysql 2>/dev/null || true
-    sleep 3
+    # Data Directory erstellen mit korrekten Berechtigungen
+    mkdir -p "$MYSQL_DATA_DIR"
     
-    # Sicherstellen dass MySQL komplett gestoppt ist
-    pkill mysqld 2>/dev/null || true
-    sleep 2
+    # KRITISCH: MySQL Benutzer muss Besitzer des Data Directories sein
+    chown -R mysql:mysql "$MYSQL_DATA_DIR"
+    chmod 750 "$MYSQL_DATA_DIR"
+    
+    # Run Directory erstellen mit korrekten Berechtigungen
+    mkdir -p "$MYSQL_RUN_DIR"
+    chown -R mysql:mysql "$MYSQL_RUN_DIR"
+    chmod 755 "$MYSQL_RUN_DIR"
     
     # Falls Daten in /var/lib/mysql existieren, migrieren wir sie
     if [ -d "/var/lib/mysql" ] && [ ! -L "/var/lib/mysql" ] && [ -n "$(ls -A /var/lib/mysql 2>/dev/null)" ]; then
         log_info "Migriere existierende MySQL-Daten nach $MYSQL_DATA_DIR"
         
         # MySQL Daten sichern und migrieren
-        mkdir -p "$MYSQL_DATA_DIR"
         rsync -av /var/lib/mysql/ "$MYSQL_DATA_DIR/" || {
             log_error "Datenmigration fehlgeschlagen"
             exit 1
@@ -91,19 +91,21 @@ if [ ! -f "$MYSQL_DATA_DIR/mysql.installed" ]; then
         mv /var/lib/mysql /var/lib/mysql.backup.$(date +%Y%m%d_%H%M%S)
     fi
     
-    # Symlink von /var/lib/mysql zu unserem Storage
+    # Symlink von /var/lib/mysql zu unserem Storage (für Kompatibilität)
     if [ ! -L "/var/lib/mysql" ]; then
         ln -sf "$MYSQL_DATA_DIR" /var/lib/mysql
+        chown -R mysql:mysql /var/lib/mysql
     fi
     
-    # Haupt-my.cnf konfigurieren
+    # Haupt-my.cnf konfigurieren - WICHTIG: datadir muss auf /var/lib/mysql zeigen für Kompatibilität
     mkdir -p /etc/mysql/conf.d
     cat > /etc/mysql/conf.d/ccc-code.cnf << MYSQLCCC
 [mysqld]
-# CCC CODE Pattern: Alles in Storage Root
-datadir = $MYSQL_DATA_DIR
+# CCC CODE Pattern: Daten in Storage Root, aber Kompatibilität mit Standard-Pfaden
+datadir = /var/lib/mysql
 socket = /var/run/mysqld/mysqld.sock
 log-error = /var/log/mysql/error.log
+pid-file = /var/run/mysqld/mysqld.pid
 
 # Ghost & BookStack Optimizations
 innodb_buffer_pool_size = 256M
@@ -122,14 +124,12 @@ skip-name-resolve
 socket = /var/run/mysqld/mysqld.sock
 MYSQLCCC
     
-    # Data Directory Ownership
-    chown -R mysql:mysql "$MYSQL_DATA_DIR"
-    chown -R mysql:mysql "$MYSQL_RUN_DIR"
-    
     # MySQL System initialisieren falls Data Directory leer ist
     if [ -z "$(ls -A "$MYSQL_DATA_DIR")" ]; then
         log_info "Initialisiere MySQL Data Directory..."
         mysqld --initialize-insecure --user=mysql --datadir="$MYSQL_DATA_DIR"
+        # Nach Initialisierung erneut Berechtigungen setzen
+        chown -R mysql:mysql "$MYSQL_DATA_DIR"
     fi
     
     # Markiere als konfiguriert
@@ -139,6 +139,15 @@ fi
 # MySQL Service sicherstellen
 log_info "Konfiguriere MySQL Service..."
 systemctl daemon-reload
+
+# AppArmor für MySQL anpassen falls nötig (für /home/user-data/mysql Zugriff)
+if [ -d "/etc/apparmor.d" ] && [ -f "/etc/apparmor.d/usr.sbin.mysqld" ]; then
+    log_info "Passe AppArmor für MySQL an..."
+    if ! grep -q "$MYSQL_DATA_DIR" /etc/apparmor.d/usr.sbin.mysqld 2>/dev/null; then
+        sed -i "/\/var\/lib\/mysql\/\*\* rwk,/a\  $MYSQL_DATA_DIR/** rwk," /etc/apparmor.d/usr.sbin.mysqld
+        systemctl reload apparmor
+    fi
+fi
 
 # MySQL Service starten mit Retry-Logic
 log_info "Starte MySQL Service..."
@@ -152,16 +161,24 @@ for attempt in {1..3}; do
         log_success "MySQL Service erfolgreich gestartet"
         break
     else
-        log_warning "MySQL Start Versuch $attempt fehlgeschlagen, neuer Versuch..."
-        systemctl stop mysql 2>/dev/null
-        sleep 3
+        log_warning "MySQL Start Versuch $attempt fehlgeschlagen"
         
-        # Beim letzten Versuch mehr Details ausgeben
+        # Debug-Informationen
+        echo -e "${YELLOW}=== MySQL Service Status ===${NC}"
+        systemctl status mysql --no-pager -l
+        
         if [ $attempt -eq 3 ]; then
             log_error "MySQL konnte nicht gestartet werden"
+            log_info "Prüfe Berechtigungen für $MYSQL_DATA_DIR:"
+            ls -la "$MYSQL_DATA_DIR" | head -10
+            log_info "MySQL Logs:"
             journalctl -u mysql --no-pager -n 20
             exit 1
         fi
+        
+        # Vor nächstem Versuch stoppen
+        systemctl stop mysql 2>/dev/null
+        sleep 3
     fi
 done
 
@@ -179,9 +196,9 @@ for i in {1..30}; do
 done
 
 # Root Passwort setzen falls nicht gesetzt (bei neuer Installation)
-if ! mysql -uroot -e "SELECT 1;" &>/dev/null; then
-    log_info "Setze MySQL Root Passwort..."
-    mysql -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_ROOT_PASS'; FLUSH PRIVILEGES;" 2>/dev/null || true
+if mysql -uroot -e "SELECT 1;" &>/dev/null 2>/dev/null; then
+    log_info "MySQL root Zugriff ohne Passwort möglich - setze Passwort..."
+    mysql -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_ROOT_PASS'; FLUSH PRIVILEGES;" 2>/dev/null
 fi
 
 # MySQL Secure Installation (idempotent)
@@ -194,12 +211,16 @@ mysql -uroot -p"$DB_ROOT_PASS" <<-EOSQL 2>/dev/null
 EOSQL
 
 # Ghost Database erstellen (falls nicht existiert)
-mysql -uroot -p"$DB_ROOT_PASS" <<-EOSQL
-    CREATE DATABASE IF NOT EXISTS $DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-    CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
-    GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';
-    FLUSH PRIVILEGES;
+if mysql -uroot -p"$DB_ROOT_PASS" -e "SELECT 1;" &>/dev/null; then
+    mysql -uroot -p"$DB_ROOT_PASS" <<-EOSQL
+        CREATE DATABASE IF NOT EXISTS $DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+        CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
+        GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';
+        FLUSH PRIVILEGES;
 EOSQL
+else
+    log_warning "Konnte keine Verbindung zu MySQL herstellen - überspringe Datenbank-Erstellung"
+fi
 
 # Root Password in ccc.conf speichern
 if ! grep -q "DB_ROOT_PASS" /etc/ccc.conf; then
