@@ -2,6 +2,7 @@
 ##########################################################
 # NGINX Installation - Strict CCC CODE Pattern
 # Konfigurationen aus $STORAGE_ROOT/nginx laden
+# setup/modules/nginx.sh
 ##########################################################
 
 source /etc/ccc.conf
