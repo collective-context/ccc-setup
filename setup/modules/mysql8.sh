@@ -27,10 +27,10 @@ if [ -z "$DB_ROOT_PASS" ]; then
 fi
 
 # MySQL Repository hinzufügen (nur bei erster Installation)
-if [ ! -f /etc/apt/sources.list.d/mysql.list ]; then
+if [ ! -f /etc/apt/sources.list.d/mysql.list ] && ! command -v mysql &> /dev/null; then
     log_info "Füge MySQL Repository hinzu..."
     wget -O /tmp/mysql-apt-config.deb https://dev.mysql.com/get/mysql-apt-config_0.8.29-1_all.deb
-    dpkg -i /tmp/mysql-apt-config.deb
+    dpkg -i /tmp/mysql-apt-config.deb || apt-get install -f -y
     rm -f /tmp/mysql-apt-config.deb
     apt-get update -qq
 fi
@@ -43,22 +43,9 @@ if ! command -v mysql &> /dev/null; then
     mkdir -p "$MYSQL_DATA_DIR"
     chown mysql:mysql "$MYSQL_DATA_DIR"
     
-    # MySQL Systemd Service anpassen für custom data directory
-    mkdir -p /etc/systemd/system/mysql.service.d/
-    cat > /etc/systemd/system/mysql.service.d/override.conf << 'MYSQLSERVICE'
-[Service]
-ExecStartPre=/bin/bash -c "[ -d /var/run/mysqld ] || mkdir -p /var/run/mysqld"
-ExecStartPre=/bin/bash -c "[ -f /var/run/mysqld/mysqld.sock ] || touch /var/run/mysqld/mysqld.sock"
-ExecStartPre=/bin/chown mysql:mysql /var/run/mysqld
-ExecStartPre=/bin/chown mysql:mysql /var/run/mysqld/mysqld.sock
-MYSQLSERVICE
-    
-    # Temporär my.cnf für Erstinstallation
-    cat > /etc/mysql/conf.d/ccc-temp.cnf << MYSQLTEMP
-[mysqld]
-datadir=$MYSQL_DATA_DIR
-socket=/var/run/mysqld/mysqld.sock
-MYSQLTEMP
+    # Run Directory erstellen
+    mkdir -p "$MYSQL_RUN_DIR"
+    chown mysql:mysql "$MYSQL_RUN_DIR"
     
     # Non-interactive Installation
     debconf-set-selections <<< "mysql-community-server mysql-community-server/root-pass password $DB_ROOT_PASS"
@@ -66,7 +53,13 @@ MYSQLTEMP
     
     DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
         mysql-server \
-        mysql-client
+        mysql-client \
+        mysql-common
+    
+    if [ $? -ne 0 ]; then
+        log_error "MySQL Installation fehlgeschlagen"
+        exit 1
+    fi
 else
     log_info "MySQL ist bereits installiert"
 fi
@@ -77,16 +70,34 @@ if [ ! -f "$MYSQL_DATA_DIR/mysql.installed" ]; then
     
     # MySQL stoppen
     systemctl stop mysql 2>/dev/null || true
+    sleep 3
+    
+    # Sicherstellen dass MySQL komplett gestoppt ist
+    pkill mysqld 2>/dev/null || true
+    sleep 2
     
     # Falls Daten in /var/lib/mysql existieren, migrieren wir sie
-    if [ -d "/var/lib/mysql" ] && [ ! -L "/var/lib/mysql" ]; then
-        if [ -n "$(ls -A /var/lib/mysql 2>/dev/null)" ]; then
-            log_info "Migriere existierende MySQL-Daten nach $MYSQL_DATA_DIR"
-            rsync -av /var/lib/mysql/ "$MYSQL_DATA_DIR/"
-        fi
+    if [ -d "/var/lib/mysql" ] && [ ! -L "/var/lib/mysql" ] && [ -n "$(ls -A /var/lib/mysql 2>/dev/null)" ]; then
+        log_info "Migriere existierende MySQL-Daten nach $MYSQL_DATA_DIR"
+        
+        # MySQL Daten sichern und migrieren
+        mkdir -p "$MYSQL_DATA_DIR"
+        rsync -av /var/lib/mysql/ "$MYSQL_DATA_DIR/" || {
+            log_error "Datenmigration fehlgeschlagen"
+            exit 1
+        }
+        
+        # Original-Daten sichern
+        mv /var/lib/mysql /var/lib/mysql.backup.$(date +%Y%m%d_%H%M%S)
+    fi
+    
+    # Symlink von /var/lib/mysql zu unserem Storage
+    if [ ! -L "/var/lib/mysql" ]; then
+        ln -sf "$MYSQL_DATA_DIR" /var/lib/mysql
     fi
     
     # Haupt-my.cnf konfigurieren
+    mkdir -p /etc/mysql/conf.d
     cat > /etc/mysql/conf.d/ccc-code.cnf << MYSQLCCC
 [mysqld]
 # CCC CODE Pattern: Alles in Storage Root
@@ -106,31 +117,76 @@ default_authentication_plugin = mysql_native_password
 
 # Performance
 skip-name-resolve
+
+[client]
+socket = /var/run/mysqld/mysqld.sock
 MYSQLCCC
     
     # Data Directory Ownership
     chown -R mysql:mysql "$MYSQL_DATA_DIR"
+    chown -R mysql:mysql "$MYSQL_RUN_DIR"
+    
+    # MySQL System initialisieren falls Data Directory leer ist
+    if [ -z "$(ls -A "$MYSQL_DATA_DIR")" ]; then
+        log_info "Initialisiere MySQL Data Directory..."
+        mysqld --initialize-insecure --user=mysql --datadir="$MYSQL_DATA_DIR"
+    fi
     
     # Markiere als konfiguriert
     touch "$MYSQL_DATA_DIR/mysql.installed"
 fi
 
 # MySQL Service sicherstellen
+log_info "Konfiguriere MySQL Service..."
 systemctl daemon-reload
-systemctl enable mysql
-systemctl start mysql
 
-# Warten bis MySQL ready ist
+# MySQL Service starten mit Retry-Logic
+log_info "Starte MySQL Service..."
+for attempt in {1..3}; do
+    systemctl enable mysql
+    systemctl start mysql
+    
+    # Warten und prüfen ob MySQL läuft
+    sleep 5
+    if systemctl is-active --quiet mysql; then
+        log_success "MySQL Service erfolgreich gestartet"
+        break
+    else
+        log_warning "MySQL Start Versuch $attempt fehlgeschlagen, neuer Versuch..."
+        systemctl stop mysql 2>/dev/null
+        sleep 3
+        
+        # Beim letzten Versuch mehr Details ausgeben
+        if [ $attempt -eq 3 ]; then
+            log_error "MySQL konnte nicht gestartet werden"
+            journalctl -u mysql --no-pager -n 20
+            exit 1
+        fi
+    fi
+done
+
+# Warten bis MySQL ready ist und Verbindung akzeptiert
+log_info "Warte auf MySQL Verfügbarkeit..."
 for i in {1..30}; do
-    if mysql -uroot -p"$DB_ROOT_PASS" -e "SELECT 1;" &>/dev/null; then
+    if mysqladmin ping -h localhost --silent 2>/dev/null; then
+        log_success "MySQL ist bereit"
+        break
+    elif [ $i -eq 30 ]; then
+        log_warning "MySQL antwortet nicht, aber fahre fort..."
         break
     fi
-    sleep 1
+    sleep 2
 done
+
+# Root Passwort setzen falls nicht gesetzt (bei neuer Installation)
+if ! mysql -uroot -e "SELECT 1;" &>/dev/null; then
+    log_info "Setze MySQL Root Passwort..."
+    mysql -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_ROOT_PASS'; FLUSH PRIVILEGES;" 2>/dev/null || true
+fi
 
 # MySQL Secure Installation (idempotent)
 mysql -uroot -p"$DB_ROOT_PASS" <<-EOSQL 2>/dev/null
-    DELETE FROM mysql.user WHERE User='';
+    DELETE FROM mysql.user WHERE User='' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
     DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
     DROP DATABASE IF EXISTS test;
     DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
@@ -150,4 +206,11 @@ if ! grep -q "DB_ROOT_PASS" /etc/ccc.conf; then
     echo "DB_ROOT_PASS=$DB_ROOT_PASS" >> /etc/ccc.conf
 fi
 
-log_success "MySQL 8 installation abgeschlossen (MiaB Style)"
+# Finaler Health Check
+if mysql -uroot -p"$DB_ROOT_PASS" -e "SELECT 1;" &>/dev/null; then
+    log_success "MySQL 8 Installation abgeschlossen (CCC CODE Style)"
+    log_info "MySQL Data: $MYSQL_DATA_DIR"
+    log_info "MySQL Socket: /var/run/mysqld/mysqld.sock"
+else
+    log_warning "MySQL Installation abgeschlossen, aber Health Check fehlgeschlagen"
+fi
