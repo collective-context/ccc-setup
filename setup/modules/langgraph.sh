@@ -2,6 +2,7 @@
 ##########################################################
 # LangGraph Installation - CCC CODE Pattern
 # DAG-basiertes Agent Orchestration Framework
+# setup/modules/langgraph.sh
 ##########################################################
 
 source /etc/ccc.conf
