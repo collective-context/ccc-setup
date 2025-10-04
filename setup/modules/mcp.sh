@@ -1,7 +1,8 @@
 #!/bin/bash
 ##########################################################
 # MCP Installation - CCC CODE Pattern
-# Model Context Protocol - Anthropics Tool-Integration Standard
+# Model Context Protocol - Anthropics Tool-Integration
+# setup/modules/mcp.sh
 ##########################################################
 
 source /etc/ccc.conf
