@@ -7,7 +7,7 @@
 curl -sL https://raw.githubusercontent.com/collective-context/ccc-setup/main/setup.sh | sudo -E bash
 
 # Oder manuell
-git clone https://github.com/collective-context/ccc
+git clone https://github.com/collective-context/ccc-setup
 cd ccc
 ./setup.sh
 ```
