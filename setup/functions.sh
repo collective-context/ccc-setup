@@ -90,7 +90,7 @@ echo "🚀 CCC CODE MIGRATION:"
 echo "scp $BACKUP_FILE user@neue-box:/tmp/"
 echo "Auf neuer Box:"
 echo "  tar -xzf /tmp/ccc-*.tar.gz -C /"
-echo "  curl -sL https://raw.githubusercontent.com/collective-context/ccc/main/setup.sh | bash"
+echo "  curl -sL https://raw.githubusercontent.com/collective-context/ccc-setup/main/setup.sh | bash"
 echo "  FERTIG! 🎉"
 BACKUP_EOF
     chmod +x /usr/local/bin/ccc-backup
