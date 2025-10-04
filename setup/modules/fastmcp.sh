@@ -2,6 +2,7 @@
 ##########################################################
 # FastMCP Installation - CCC CODE Pattern
 # Python Framework für MCP Server Implementation
+# setup/modules/fastmcp.sh
 ##########################################################
 
 source /etc/ccc.conf
