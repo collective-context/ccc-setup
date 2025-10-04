@@ -174,17 +174,53 @@ socket = /var/run/mysqld/mysqld.sock
 default-character-set = utf8mb4
 MYSQLCCC
 
-# Schritt 7: AppArmor anpassen
-log_info "Passe AppArmor an..."
-if [ -d "/etc/apparmor.d" ] && [ -f "/etc/apparmor.d/usr.sbin.mysqld" ]; then
-    # AppArmor-Profil für MySQL anpassen
-    if ! grep -q "$MYSQL_DATA_DIR" /etc/apparmor.d/usr.sbin.mysqld; then
-        sed -i "/\/var\/lib\/mysql\/\*\* rwk,/a\  $MYSQL_DATA_DIR/** rwk," /etc/apparmor.d/usr.sbin.mysqld
-        sed -i "/\/var\/lib\/mysql\/\*\* rwk,/a\  $STORAGE_ROOT/mysql/** rwk," /etc/apparmor.d/usr.sbin.mysqld
+# Schritt 7: AppArmor anpassen (nur wenn verfügbar und aktiv)
+log_info "Prüfe AppArmor Verfügbarkeit..."
+
+# Robuste Prüfung auf AppArmor Verfügbarkeit
+APPARMOR_AVAILABLE=false
+if [ -f "/etc/apparmor.d/usr.sbin.mysqld" ]; then
+    # Verschiedene Methoden um AppArmor Verfügbarkeit zu prüfen
+    if command -v apparmor_status >/dev/null 2>&1; then
+        APPARMOR_AVAILABLE=true
+    elif systemctl list-unit-files | grep -q apparmor.service; then
+        APPARMOR_AVAILABLE=true
+    elif [ -f "/sys/kernel/security/apparmor/profiles" ]; then
+        APPARMOR_AVAILABLE=true
     fi
+fi
+
+if [ "$APPARMOR_AVAILABLE" = true ]; then
+    log_info "AppArmor ist verfügbar - passe MySQL Profil an..."
     
-    systemctl reload apparmor
-    log_success "AppArmor angepasst"
+    # Sicherstellen dass das Profil existiert
+    if [ ! -f "/etc/apparmor.d/usr.sbin.mysqld" ]; then
+        log_warning "AppArmor MySQL Profil nicht gefunden"
+    else
+        # AppArmor-Profil für MySQL anpassen
+        if ! grep -q "$MYSQL_DATA_DIR" /etc/apparmor.d/usr.sbin.mysqld; then
+            # Backup der originalen Config
+            cp /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/usr.sbin.mysqld.backup
+            
+            # Unsere Pfade hinzufügen
+            sed -i "/\/var\/lib\/mysql\/\*\* rwk,/a\  $MYSQL_DATA_DIR/** rwk," /etc/apparmor.d/usr.sbin.mysqld
+            sed -i "/\/var\/lib\/mysql\/\*\* rwk,/a\  $STORAGE_ROOT/mysql/** rwk," /etc/apparmor.d/usr.sbin.mysqld
+            
+            log_success "AppArmor Profil angepasst"
+        else
+            log_info "AppArmor Profil wurde bereits angepasst"
+        fi
+        
+        # AppArmor Dienst neu laden falls möglich
+        if systemctl is-active apparmor --quiet 2>/dev/null; then
+            systemctl reload apparmor
+            log_success "AppArmor Dienst neu geladen"
+        else
+            log_info "AppArmor Dienst nicht aktiv - Profil wird bei nächster Aktivierung übernommen"
+        fi
+    fi
+else
+    log_info "AppArmor nicht verfügbar - überspringe Konfiguration (normal in LXC Containern)"
 fi
 
 # Schritt 8: MySQL Service starten
@@ -312,6 +348,6 @@ else
     log_info "⚠️  Bitte prüfen Sie:"
     log_info "   - MySQL Logs: journalctl -u mysql"
     log_info "   - Berechtigungen: ls -la $MYSQL_DATA_DIR"
-    log_info "   - AppArmor Status: aa-status | grep mysql"
+    log_info "   - AppArmor Status: aa-status | grep mysql 2>/dev/null || echo 'AppArmor nicht verfügbar'"
     exit 1
 fi
