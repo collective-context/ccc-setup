@@ -1,10 +1,10 @@
 #!/bin/bash
 ##########################################################
 # CCC Commander Bootstrap Script
-# GitHub: https://github.com/collective-context/ccc
+# GitHub: https://github.com/collective-context/ccc-setup/
 # 
 # Installation:
-#   curl -sL https://raw.githubusercontent.com/collective-context/ccc/main/setup.sh | sudo -E bash
+#   curl -sL https://raw.githubusercontent.com/collective-context/ccc-setup/main/setup.sh | sudo -E bash
 #
 # Basiert auf Mail-in-a-Box Installation Pattern
 ##########################################################
@@ -71,7 +71,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # GitHub Repository klonen wenn es noch nicht existiert
-if [ ! -d "/root/ccc" ]; then
+if [ ! -d "/root/ccc/" ]; then
     # Git installieren falls nötig
     if [ ! -f /usr/bin/git ]; then
         echo -e "${BLUE}[INFO]${NC} Installiere git..."
@@ -80,7 +80,7 @@ if [ ! -d "/root/ccc" ]; then
     fi
     
     # Repository klonen
-    SOURCE=${CCC_REPO:-https://github.com/collective-context/ccc}
+    SOURCE=${CCC_REPO:-https://github.com/collective-context/ccc-setup}
     echo -e "${BLUE}[INFO]${NC} Lade CCC Commander $TAG herunter..."
     git clone \
         -b "$TAG" --depth 1 \
