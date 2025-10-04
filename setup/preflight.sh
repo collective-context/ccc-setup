@@ -1,6 +1,7 @@
 #!/bin/bash
 ##########################################################
 # Preflight Checks - Systemvoraussetzungen prüfen
+# setup/preflight.sh
 ##########################################################
 
 source /root/ccc/setup/functions.sh
