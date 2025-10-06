@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 ##########################################################
 # Preflight Checks - Systemvoraussetzungen prüfen
 # setup/preflight.sh

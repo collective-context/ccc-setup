@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 ##########################################################
 # Interaktive Fragen - Erweitert für Developer Tools 
 # setup/questions.sh - Mit whiptail Dialogen

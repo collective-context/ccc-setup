@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 ##########################################################
 # System Basis Konfiguration - CCC CODE Pattern
 ##########################################################

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 ##########################################################
 # CCC Commander Main Setup Script - STRICT CCC CODE
 # setup/start.sh
