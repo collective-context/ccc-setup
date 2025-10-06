@@ -15,6 +15,9 @@
 set -euo pipefail
 # CCC Commander Bootstrap Script
 
+# Standardwerte setzen
+TEST_MODE=${TEST_MODE:-false}
+
 # Farbdefinitionen
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
