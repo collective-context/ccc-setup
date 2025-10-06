@@ -65,15 +65,31 @@ install_package \
     rsync \
     cron
 
-# Erweiterte Firewall-Konfiguration mit Systemhärtung, Audit und IDS
+# Erweiterte Firewall-Konfiguration mit Systemhärtung, Audit, IDS und HIDS
 ufw --force disable  # Erstmal aus für Installation
 ufw default deny incoming
 ufw default allow outgoing
 
-# Intrusion Detection System
-install_package aide
+# Intrusion Detection und Host-based IDS
+install_package aide rkhunter chkrootkit
 /usr/sbin/aideinit
 /usr/sbin/aide --update
+
+# RKHunter Setup und initiale Prüfung
+rkhunter --propupd
+rkhunter --check --skip-keypress
+
+# Chkrootkit Scan
+chkrootkit > /var/log/ccc-security-scan.log 2>&1
+
+# Automatische Sicherheitsscans einrichten
+cat > /etc/cron.daily/ccc-security-scan << 'SECSCAN'
+#!/bin/bash
+rkhunter --check --quiet --skip-keypress >> /var/log/ccc-security-scan.log 2>&1
+chkrootkit >> /var/log/ccc-security-scan.log 2>&1
+/usr/sbin/aide --check >> /var/log/ccc-security-scan.log 2>&1
+SECSCAN
+chmod +x /etc/cron.daily/ccc-security-scan
 
 # SSH Härtung mit maximaler Sicherheit
 ufw limit 22/tcp comment 'SSH with strict rate limiting'
