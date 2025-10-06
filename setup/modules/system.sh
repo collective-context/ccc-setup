@@ -92,12 +92,14 @@ for port in 21 23 25 110 143 445 3306 3389 5432 6379 27017; do
     ufw deny $port/tcp comment "Block port $port"
 done
 
-# Fail2ban Konfiguration mit erweiterten Regeln
+# Fail2ban Konfiguration mit erweiterten Sicherheitsregeln
 cat > /etc/fail2ban/jail.d/ccc.conf << 'F2B_EOF'
 [DEFAULT]
-bantime = 24h
+bantime = 48h
 findtime = 10m
 maxretry = 3
+banaction = ufw
+banaction_allports = ufw
 
 [sshd]
 enabled = true
@@ -105,22 +107,39 @@ port = ssh
 filter = sshd
 logpath = /var/log/auth.log
 maxretry = 3
-bantime = 48h
+bantime = 72h
+findtime = 10m
 
 [nginx-http-auth]
 enabled = true
 filter = nginx-http-auth
 port = http,https
 logpath = /var/log/nginx/error.log
+maxretry = 3
+bantime = 48h
 findtime = 10m
-maxretry = 5
 
-[sshd]
+[nginx-limit-req]
 enabled = true
+filter = nginx-limit-req
+port = http,https
+logpath = /var/log/nginx/error.log
+maxretry = 3
+bantime = 48h
+findtime = 10m
 
-[nginx-http-auth]
+[nginx-botsearch]
 enabled = true
+filter = nginx-botsearch
+port = http,https
+logpath = /var/log/nginx/access.log
+maxretry = 2
+bantime = 72h
+findtime = 5m
 F2B_EOF
+
+# Fail2ban Service neu starten
+systemctl restart fail2ban
 
 systemctl restart fail2ban
 
