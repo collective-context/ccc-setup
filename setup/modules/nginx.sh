@@ -10,7 +10,7 @@ source /root/ccc/setup/functions.sh
 
 echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
 
-# NGINX Version und Build-Optionen
+# NGINX Version und Build-Optionen (WordOps-Style)
 NGINX_VERSION="1.28.0"
 
 # NGINX Verzeichnisstruktur
@@ -26,8 +26,10 @@ NGINX_SNIPPETS="/etc/nginx/snippets"
 NGINX_CACHE_FASTCGI="/var/cache/nginx/fastcgi"
 NGINX_CACHE_PROXY="/var/cache/nginx/proxy"
 
-# NGINX Version und Build-Optionen (WordOps-Style)
-NGINX_VERSION="1.28.0"
+# Verzeichnisse erstellen
+mkdir -p "$NGINX_CUSTOM" "$NGINX_SITES" "$NGINX_SITES_ENABLED" \
+         "$NGINX_CONF" "$NGINX_CACHE" "$NGINX_SSL" "$NGINX_SNIPPETS" \
+         "$NGINX_CACHE_FASTCGI" "$NGINX_CACHE_PROXY"
 
 # NGINX Repository Setup
 if [ ! -f /etc/apt/sources.list.d/nginx.list ]; then
