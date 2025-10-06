@@ -18,7 +18,19 @@ mkdir -p "$SITES_AVAILABLE" "$SITES_ENABLED" "$NGINX_CUSTOM"
 site_create() {
     # Parameter validieren
     if [ "$#" -lt 1 ]; then
-        log_error "Verwendung: site_create <domain> [--wp|--wpsubdir|--wpsubdomain] [--php VERSION] [--ssl] [--wpfc|--wpredis|--wpsc]"
+        log_error "Verwendung: ccc site create <domain> [--wp|--wpsubdir|--wpsubdomain] [--php VERSION] [--ssl] [--wpfc|--wpredis|--wpsc]"
+        return 1
+    fi
+
+    # Prüfe ob NGINX installiert ist
+    if ! command -v nginx >/dev/null 2>&1; then
+        log_error "NGINX ist nicht installiert. Bitte zuerst NGINX installieren."
+        return 1
+    fi
+
+    # Prüfe ob PHP verfügbar ist
+    if ! command -v php >/dev/null 2>&1; then
+        log_error "PHP ist nicht installiert. Bitte zuerst PHP installieren."
         return 1
     fi
 
