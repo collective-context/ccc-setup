@@ -151,7 +151,6 @@ else
     fi
     
     # Führe start.sh im nicht-interaktiven Modus aus
-    ./start.sh --non-interactive
     if [ -x "./start.sh" ]; then
         ./start.sh --non-interactive
     else
