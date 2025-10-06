@@ -29,6 +29,17 @@ site_create() {
     local wp_title="WordPress Site"
     local wp_password=$(openssl rand -base64 12)
     
+    # WordPress CLI installieren falls nicht vorhanden
+    if [[ "$site_type" == "wordpress"* ]] && ! command -v wp &> /dev/null; then
+        log_info "Installiere WP-CLI..."
+        curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+        chmod +x wp-cli.phar
+        mv wp-cli.phar /usr/local/bin/wp
+        
+        # WP-CLI Bash Completion
+        wget -O /etc/bash_completion.d/wp-completion.bash https://raw.githubusercontent.com/wp-cli/wp-cli/master/utils/wp-completion.bash
+    fi
+    
     # WordPress Installation vorbereiten
     if [[ "$site_type" == "wordpress"* ]]; then
         # WP-CLI installieren falls nicht vorhanden
