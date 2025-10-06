@@ -39,13 +39,14 @@ IFS=$'\n\t'
 # Trap für Fehlerbehandlung
 trap 'error_handler $? $LINENO $BASH_LINENO "$BASH_COMMAND" $(printf "::%s" ${FUNCNAME[@]:-})' ERR
 
-# Erweiterte Fehlerbehandlung mit Backup und Wiederherstellung
+# Erweiterte Fehlerbehandlung mit Backup, Wiederherstellung und Sicherheitsprotokollierung
 error_handler() {
     local exit_code=$1
     local line_no=$2
     local bash_lineno=$3
     local last_command=$4
     local func_trace=$5
+    local script_name=$(basename "${BASH_SOURCE[1]}")
     
     # Detaillierte Fehlerinformationen
     echo -e "${RED}[FATAL ERROR]${NC} in ${BASH_SOURCE[1]}:$line_no" >&2
