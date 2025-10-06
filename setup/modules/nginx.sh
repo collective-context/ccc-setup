@@ -14,18 +14,26 @@ echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
 NGINX_VERSION="1.28.0"
 
 # NGINX Verzeichnisstruktur (WordOps-Style)
-NGINX_CUSTOM="/etc/nginx/custom"
-NGINX_SITES="/etc/nginx/sites-available"
-NGINX_SITES_ENABLED="/etc/nginx/sites-enabled"
-NGINX_CONF="/etc/nginx/conf.d"
+NGINX_ROOT="/etc/nginx"
+NGINX_CUSTOM="$NGINX_ROOT/custom"
+NGINX_SITES="$NGINX_ROOT/sites-available"
+NGINX_SITES_ENABLED="$NGINX_ROOT/sites-enabled"
+NGINX_CONF="$NGINX_ROOT/conf.d"
 NGINX_CACHE="/var/cache/nginx"
-NGINX_SSL="/etc/nginx/ssl"
-NGINX_SNIPPETS="/etc/nginx/snippets"
+NGINX_SSL="$NGINX_ROOT/ssl"
+NGINX_SNIPPETS="$NGINX_ROOT/snippets"
 
 # Cache und Log Verzeichnisse
-NGINX_CACHE_FASTCGI="/var/cache/nginx/fastcgi"
-NGINX_CACHE_PROXY="/var/cache/nginx/proxy"
+NGINX_CACHE_FASTCGI="$NGINX_CACHE/fastcgi"
+NGINX_CACHE_PROXY="$NGINX_CACHE/proxy"
 NGINX_LOG="/var/log/nginx"
+
+# Backup des ursprünglichen NGINX-Verzeichnisses
+if [ -d "$NGINX_ROOT" ]; then
+    timestamp=$(date +%Y%m%d_%H%M%S)
+    mv "$NGINX_ROOT" "${NGINX_ROOT}_backup_${timestamp}"
+    log_info "Backup des ursprünglichen NGINX-Verzeichnisses erstellt: ${NGINX_ROOT}_backup_${timestamp}"
+fi
 
 # Verzeichnisse erstellen und Berechtigungen setzen
 for dir in "$NGINX_CUSTOM" "$NGINX_SITES" "$NGINX_SITES_ENABLED" \
