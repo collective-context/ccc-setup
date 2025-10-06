@@ -13,7 +13,7 @@ echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
 # NGINX Version und Build-Optionen (WordOps-Style)
 NGINX_VERSION="1.28.0"
 
-# NGINX Repository Setup
+# WordOps-Style NGINX Repository
 if [ ! -f /etc/apt/sources.list.d/nginx.list ]; then
     # NGINX Repository Key
     curl -fsSL https://nginx.org/keys/nginx_signing.key | gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
@@ -23,6 +23,12 @@ if [ ! -f /etc/apt/sources.list.d/nginx.list ]; then
     
     # Repository Priorität setzen
     echo -e "Package: *\nPin: origin nginx.org\nPin-Priority: 900\n" | sudo tee /etc/apt/preferences.d/99nginx
+    
+    # WordOps-Style NGINX Module
+    apt-get update
+    install_package build-essential libpcre3-dev zlib1g-dev libssl-dev \
+                    libgeoip-dev libtool automake autoconf libperl-dev \
+                    libxslt1-dev libgd-dev libxml2-dev libicu-dev
 fi
 
 # NGINX Kompilierungsoptionen für erweiterte Features
