@@ -65,16 +65,26 @@ install_package \
     rsync \
     cron
 
-# Erweiterte Firewall-Konfiguration mit Systemhärtung
+# Erweiterte Firewall-Konfiguration mit Systemhärtung und Audit
 ufw --force disable  # Erstmal aus für Installation
 ufw default deny incoming
 ufw default allow outgoing
 
-# SSH Härtung
+# SSH Härtung mit erweiterten Sicherheitseinstellungen
 ufw limit 22/tcp comment 'SSH with rate limiting'
 sed -i 's/#PermitRootLogin yes/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
 sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+sed -i 's/#MaxAuthTries.*/MaxAuthTries 3/' /etc/ssh/sshd_config
+sed -i 's/#AllowAgentForwarding.*/AllowAgentForwarding no/' /etc/ssh/sshd_config
+sed -i 's/#AllowTcpForwarding.*/AllowTcpForwarding no/' /etc/ssh/sshd_config
+sed -i 's/#X11Forwarding.*/X11Forwarding no/' /etc/ssh/sshd_config
+sed -i 's/#ClientAliveInterval.*/ClientAliveInterval 300/' /etc/ssh/sshd_config
+sed -i 's/#ClientAliveCountMax.*/ClientAliveCountMax 2/' /etc/ssh/sshd_config
 systemctl restart ssh
+
+# SSH Audit Log aktivieren
+echo "local6.* /var/log/ssh-audit.log" > /etc/rsyslog.d/10-ssh-audit.conf
+systemctl restart rsyslog
 
 # Web-Dienste mit Rate-Limiting
 ufw limit 80/tcp comment 'HTTP with rate limiting'
