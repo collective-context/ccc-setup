@@ -22,6 +22,22 @@ site_create() {
         return 1
     fi
 
+    # Prüfe ob NGINX und PHP installiert sind
+    for cmd in nginx php mysql; do
+        if ! command -v $cmd >/dev/null 2>&1; then
+            log_error "$cmd ist nicht installiert. Bitte zuerst $cmd installieren."
+            return 1
+        fi
+    done
+
+    # Prüfe ob die benötigten Verzeichnisse existieren
+    for dir in "$SITES_AVAILABLE" "$SITES_ENABLED" "$NGINX_CUSTOM"; do
+        if [ ! -d "$dir" ]; then
+            log_error "Verzeichnis $dir existiert nicht"
+            return 1
+        fi
+    done
+
     # Prüfe ob NGINX installiert ist
     if ! command -v nginx >/dev/null 2>&1; then
         log_error "NGINX ist nicht installiert. Bitte zuerst NGINX installieren."
