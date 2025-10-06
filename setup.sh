@@ -115,17 +115,20 @@ if [ -t 0 ]; then
     # Interaktiver Modus (Terminal vorhanden)
     log_info "Starte interaktive Installation..."
     cd /root/ccc/setup || exit 1
+    log_info "In setup-Verzeichnis gewechselt"
     
     # Prüfe ob start.sh existiert und ausführbar ist
     if [ ! -f "./start.sh" ]; then
         log_error "start.sh nicht gefunden"
         exit 1
     fi
+    log_info "start.sh gefunden"
     
     if [ ! -x "./start.sh" ]; then
         log_error "start.sh ist nicht ausführbar"
         chmod 700 ./start.sh
     fi
+    log_info "start.sh ist ausführbar"
     
     # Führe start.sh direkt aus
     ./start.sh
@@ -147,17 +150,20 @@ else
     
     # Wechsle ins Setup-Verzeichnis
     cd /root/ccc/setup || exit 1
+    log_info "In setup-Verzeichnis gewechselt"
     
     # Prüfe ob start.sh existiert und ausführbar ist
     if [ ! -f "./start.sh" ]; then
         log_error "start.sh nicht gefunden"
         exit 1
     fi
+    log_info "start.sh gefunden"
     
     if [ ! -x "./start.sh" ]; then
         log_error "start.sh ist nicht ausführbar"
         chmod 700 ./start.sh
     fi
+    log_info "start.sh ist ausführbar"
     
     # Führe start.sh im nicht-interaktiven Modus aus
     ./start.sh --non-interactive
