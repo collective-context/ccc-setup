@@ -13,17 +13,54 @@ echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
 # NGINX Version und Build-Optionen (WordOps-Style)
 NGINX_VERSION="1.28.0"
 
-# WordOps NGINX Repository Setup
-if [ ! -f /etc/apt/sources.list.d/wordops.list ]; then
-    # WordOps Repository Key
-    curl -sL https://mirrors.wordops.eu/pub.key | gpg --dearmor | sudo tee /usr/share/keyrings/wordops-archive-keyring.gpg >/dev/null
+# NGINX Repository Setup
+if [ ! -f /etc/apt/sources.list.d/nginx.list ]; then
+    # NGINX Repository Key
+    curl -fsSL https://nginx.org/keys/nginx_signing.key | gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
     
     # Repository mit signiertem Key hinzufügen
-    echo "deb [signed-by=/usr/share/keyrings/wordops-archive-keyring.gpg] https://mirrors.wordops.eu/debian $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/wordops.list
+    echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/mainline/ubuntu $(lsb_release -cs) nginx" | sudo tee /etc/apt/sources.list.d/nginx.list
     
     # Repository Priorität setzen
-    echo -e "Package: *\nPin: origin mirrors.wordops.eu\nPin-Priority: 900\n" | sudo tee /etc/apt/preferences.d/99wordops
+    echo -e "Package: *\nPin: origin nginx.org\nPin-Priority: 900\n" | sudo tee /etc/apt/preferences.d/99nginx
 fi
+
+# NGINX Module und Dependencies
+install_package build-essential libpcre3-dev zlib1g-dev libssl-dev \
+    libgeoip-dev libtool automake autoconf libperl-dev \
+    libxslt1-dev libgd-dev libxml2-dev libicu-dev
+
+# NGINX Kompilierungsoptionen
+NGINX_BUILD_OPTIONS="
+    --with-http_ssl_module
+    --with-http_v2_module
+    --with-http_v3_module
+    --with-http_realip_module
+    --with-http_addition_module
+    --with-http_sub_module
+    --with-http_dav_module
+    --with-http_flv_module
+    --with-http_mp4_module
+    --with-http_gunzip_module
+    --with-http_gzip_static_module
+    --with-http_auth_request_module
+    --with-http_random_index_module
+    --with-http_secure_link_module
+    --with-http_stub_status_module
+    --with-http_slice_module
+    --with-threads
+    --with-stream
+    --with-stream_ssl_module
+    --with-stream_realip_module
+    --with-stream_ssl_preread_module
+    --with-pcre-jit
+    --with-zlib=/usr/local/src/zlib
+    --with-openssl=/usr/local/src/openssl
+    --add-module=/usr/local/src/ngx_brotli
+    --add-module=/usr/local/src/ngx_cache_purge
+    --add-module=/usr/local/src/ngx_vts_module
+    --add-module=/usr/local/src/headers-more-nginx-module
+"
 
 # NGINX aus WordOps Repository installieren
 apt-get update
