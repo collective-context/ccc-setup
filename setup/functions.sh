@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 ##########################################################
 # CCC Commander Hilfsfunktionen | CCC CODE
 # setup/functions.sh
