@@ -22,6 +22,14 @@ site_create() {
     local use_ssl=0
     local cache_type=""
     local site_type=""
+    local wp_type=""
+    local proxy_url=""
+    
+    # Parameter validieren
+    if [ "$#" -lt 1 ]; then
+        log_error "Verwendung: ccc site create <domain> [--wp|--wpsubdir|--wpsubdomain] [--php VERSION] [--ssl] [--wpfc|--wpredis|--wpsc]"
+        return 1
+    fi
     
     # Parameter validieren
     if [ "$#" -lt 1 ]; then
