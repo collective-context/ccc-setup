@@ -30,8 +30,19 @@ NGINX_CACHE_PROXY="/var/cache/nginx/proxy"
 if [ ! -f /etc/apt/sources.list.d/wordops.list ]; then
     log_info "Füge WordOps Repository hinzu..."
     
-    # WordOps Repository Key
-    curl -fsSL https://mirrors.wordops.eu/pub.key | gpg --dearmor | sudo tee /usr/share/keyrings/wordops-archive-keyring.gpg >/dev/null
+    # WordOps Repository Key mit Validierung
+    KEY_URL="https://mirrors.wordops.eu/pub.key"
+    KEY_FINGERPRINT="3B89 F2FB 6162 B6F4 802F  97C6 1B39 4522 E1B1 2CAB"
+    
+    # Key herunterladen und validieren
+    curl -fsSL "$KEY_URL" | gpg --dearmor > /tmp/wordops.gpg
+    if ! gpg --show-keys /tmp/wordops.gpg | grep -q "$KEY_FINGERPRINT"; then
+        log_error "WordOps Repository Key konnte nicht validiert werden"
+        exit 1
+    fi
+    
+    # Validierten Key installieren
+    mv /tmp/wordops.gpg /usr/share/keyrings/wordops-archive-keyring.gpg
     
     # Repository mit signiertem Key hinzufügen
     echo "deb [signed-by=/usr/share/keyrings/wordops-archive-keyring.gpg] https://mirrors.wordops.eu/debian $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/wordops.list
