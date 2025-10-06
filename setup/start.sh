@@ -70,6 +70,7 @@ else
     DB_NAME="ccc_$(openssl rand -hex 3)"
     DB_USER="ccc_user_$(openssl rand -hex 3)"
     DB_PASS=$(openssl rand -base64 16)
+    log_info "Standardvariablen gesetzt"
 fi
 
 # ✅✅✅ CCC CODE MAGIE: User-Data Verzeichnis erstellen ✅✅✅
