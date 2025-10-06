@@ -151,10 +151,5 @@ else
     fi
     
     # Führe start.sh im nicht-interaktiven Modus aus
-    if [ -x "./start.sh" ]; then
-        ./start.sh --non-interactive
-    else
-        log_error "start.sh ist nicht ausführbar"
-        exit 1
-    fi
+    ./start.sh --non-interactive
 fi
