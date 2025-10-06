@@ -15,8 +15,16 @@ NC='\033[0m'
 # Sicherheits-Konfiguration
 readonly LOG_FILE="/var/log/ccc-setup.log"
 readonly ERROR_LOG="/var/log/ccc-errors.log"
+readonly AUDIT_LOG="/var/log/ccc-audit.log"
 readonly MAX_RETRIES=3
 readonly SECURE_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+readonly SECURE_UMASK=0027
+readonly SECURE_FILE_MODE=0640
+readonly SECURE_DIR_MODE=0750
+
+# Sichere Umgebung erzwingen
+umask $SECURE_UMASK
+export PATH="$SECURE_PATH"
 
 # Strict Mode für bessere Fehlerbehandlung
 set -euo pipefail
