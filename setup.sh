@@ -36,21 +36,30 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# Log-Verzeichnis erstellen
+mkdir -p /var/log/ccc
+chown root:adm /var/log/ccc
+chmod 750 /var/log/ccc
+
 # Logging Funktionen mit Test-Modus
 log_info() { 
     echo -e "${BLUE}[INFO]${NC} $1"
+    echo "[INFO] $(date +%Y-%m-%d\ %H:%M:%S) $1" >> "/var/log/ccc/setup.log"
     [ "$TEST_MODE" = "true" ] && echo "[TEST] $1" >> "$LOG_FILE"
 }
 log_success() { 
     echo -e "${GREEN}[SUCCESS]${NC} $1"
+    echo "[SUCCESS] $(date +%Y-%m-%d\ %H:%M:%S) $1" >> "/var/log/ccc/setup.log"
     [ "$TEST_MODE" = "true" ] && echo "[TEST-SUCCESS] $1" >> "$LOG_FILE"
 }
 log_warning() { 
     echo -e "${YELLOW}[WARNING]${NC} $1"
+    echo "[WARNING] $(date +%Y-%m-%d\ %H:%M:%S) $1" >> "/var/log/ccc/setup.log"
     [ "$TEST_MODE" = "true" ] && echo "[TEST-WARNING] $1" >> "$LOG_FILE"
 }
 log_error() { 
     echo -e "${RED}[ERROR]${NC} $1"
+    echo "[ERROR] $(date +%Y-%m-%d\ %H:%M:%S) $1" >> "/var/log/ccc/setup.log"
     [ "$TEST_MODE" = "true" ] && echo "[TEST-ERROR] $1" >> "$LOG_FILE"
 }
 
