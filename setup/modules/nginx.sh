@@ -38,7 +38,14 @@ NGINX_EXTRA_OPTIONS="
     --with-zlib=/usr/local/src/zlib
     --with-openssl=/usr/local/src/openssl
     --add-module=/usr/local/src/ngx_brotli
+    --add-module=/usr/local/src/ngx_cache_purge
+    --add-module=/usr/local/src/ngx_vts_module
+    --add-module=/usr/local/src/headers-more-nginx-module
 "
+
+# NGINX Kompilierungsoptionen
+CFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -fPIC"
+LDFLAGS="-Wl,-z,relro -Wl,-z,now -Wl,--as-needed -pie"
 
 # NGINX Verzeichnisstruktur (WordOps-inspiriert)
 NGINX_CUSTOM="/etc/nginx/custom"
