@@ -13,17 +13,24 @@ echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
 # NGINX Version und Build-Optionen (WordOps-Style)
 NGINX_VERSION="1.28.0"
 
-# NGINX Repository Setup
-if [ ! -f /etc/apt/sources.list.d/nginx.list ]; then
-    # NGINX Repository Key
-    curl -fsSL https://nginx.org/keys/nginx_signing.key | gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
+# WordOps-Style NGINX Repository
+if [ ! -f /etc/apt/sources.list.d/wordops.list ]; then
+    # WordOps Repository Key
+    curl -sL https://mirrors.wordops.eu/pub.key | gpg --dearmor | sudo tee /usr/share/keyrings/wordops-archive-keyring.gpg >/dev/null
     
     # Repository mit signiertem Key hinzufügen
-    echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/mainline/ubuntu $(lsb_release -cs) nginx" | sudo tee /etc/apt/sources.list.d/nginx.list
+    echo "deb [signed-by=/usr/share/keyrings/wordops-archive-keyring.gpg] https://mirrors.wordops.eu/debian $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/wordops.list
     
     # Repository Priorität setzen
-    echo -e "Package: *\nPin: origin nginx.org\nPin-Priority: 900\n" | sudo tee /etc/apt/preferences.d/99nginx
+    echo -e "Package: *\nPin: origin mirrors.wordops.eu\nPin-Priority: 900\n" | sudo tee /etc/apt/preferences.d/99wordops
 fi
+
+# NGINX aus WordOps Repository installieren
+apt-get update
+install_package nginx-custom nginx-extras
+
+# WordOps NGINX Module und Konfigurationen
+cp -r /usr/share/wordops/nginx/* /etc/nginx/
 
 # NGINX Module und Dependencies
 install_package build-essential libpcre3-dev zlib1g-dev libssl-dev \
