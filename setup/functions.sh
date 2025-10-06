@@ -193,17 +193,22 @@ install_package() {
     return $exit_code
 }
 
-# Erweiterte Logging-Funktionen mit Sicherheitsrelevanz
-log_success() {
-    echo -e "${GREEN}[OK]${NC} $1"
-    logger -t "ccc-setup" "[SUCCESS] $1"
+# Logging Funktionen mit Test-Modus
+log_info() { 
+    echo -e "${BLUE}[INFO]${NC} $1"
+    [ "$TEST_MODE" = "true" ] && echo "[TEST] $1" >> "$LOG_FILE"
 }
-
-log_error() {
+log_success() { 
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    [ "$TEST_MODE" = "true" ] && echo "[TEST-SUCCESS] $1" >> "$LOG_FILE"
+}
+log_warning() { 
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+    [ "$TEST_MODE" = "true" ] && echo "[TEST-WARNING] $1" >> "$LOG_FILE"
+}
+log_error() { 
     echo -e "${RED}[ERROR]${NC} $1"
-    logger -t "ccc-setup" "[ERROR] $1"
-    # Fehler in separate Datei loggen
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1" >> "/var/log/ccc-errors.log"
+    [ "$TEST_MODE" = "true" ] && echo "[TEST-ERROR] $1" >> "$LOG_FILE"
 }
 
 # Erweiterte Sicherheitsfunktionen mit umfassender Validierung
