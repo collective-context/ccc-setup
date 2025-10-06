@@ -47,27 +47,49 @@ log_success() { log OK "$*"; }
 log_error() { log ERROR "$*"; }
 log_warning() { log WARN "$*"; }
 
-# Sichere und idempotente Paketinstallation mit Fehlerbehandlung
+# Erweiterte Paketinstallation mit Fehlerbehandlung und Retry
 install_package() {
+    local max_retries=3
     local exit_code=0
+    
     for pkg in "$@"; do
-        if ! dpkg -s "$pkg" >/dev/null 2>&1; then
-            log_info "Installiere $pkg..."
-            if ! DEBIAN_FRONTEND=noninteractive apt-get install -y \
-                -qq -o Dpkg::Options::="--force-confold" \
-                --no-install-recommends "$pkg"; then
-                log_error "Installation von $pkg fehlgeschlagen"
-                exit_code=1
-                continue
+        local retries=0
+        while [ $retries -lt $max_retries ]; do
+            if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+                log_info "Installiere $pkg (Versuch $((retries+1))/$max_retries)..."
+                
+                # Apt-Cache aktualisieren bei Retry
+                if [ $retries -gt 0 ]; then
+                    apt-get update -qq
+                fi
+                
+                if DEBIAN_FRONTEND=noninteractive apt-get install -y \
+                    -qq -o Dpkg::Options::="--force-confold" \
+                    --no-install-recommends "$pkg"; then
+                    break
+                else
+                    retries=$((retries+1))
+                    if [ $retries -eq $max_retries ]; then
+                        log_error "Installation von $pkg fehlgeschlagen nach $max_retries Versuchen"
+                        exit_code=1
+                        break
+                    fi
+                    log_warning "Installation fehlgeschlagen, versuche erneut in 5 Sekunden..."
+                    sleep 5
+                fi
+            else
+                log_info "$pkg ist bereits installiert"
+                # Erweiterte Paketvalidierung
+                if ! dpkg -l "$pkg" | grep -q '^ii'; then
+                    log_error "$pkg ist beschädigt oder nur teilweise installiert"
+                    if ! apt-get install -y --fix-broken; then
+                        log_error "Automatische Reparatur fehlgeschlagen"
+                        exit_code=1
+                    fi
+                fi
+                break
             fi
-        else
-            log_info "$pkg ist bereits installiert"
-            # Prüfe ob das Paket korrekt installiert ist
-            if ! dpkg -l "$pkg" | grep -q '^ii'; then
-                log_error "$pkg ist beschädigt oder nur teilweise installiert"
-                exit_code=1
-            fi
-        fi
+        done
     done
     return $exit_code
 }
