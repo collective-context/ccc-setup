@@ -10,18 +10,6 @@ source /root/ccc/setup/functions.sh
 
 echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
 
-#!/bin/bash
-set -euo pipefail
-##########################################################
-# NGINX Installation - CCC CODE Pattern
-# Basiert auf WordOps (https://wordops.net)
-##########################################################
-
-source /etc/ccc.conf
-source /root/ccc/setup/functions.sh
-
-echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
-
 # NGINX Version und Build-Optionen
 NGINX_VERSION="1.28.0"
 
