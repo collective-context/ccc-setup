@@ -55,8 +55,9 @@ BACKUP_DIR="$STORAGE_ROOT/backups"
 DATE=$(date +%Y%m%d-%H%M%S)
 BACKUP_FILE="$BACKUP_DIR/ccc-$DATE.tar.gz"
 
-# Backup-Verzeichnis erstellen
+# Backup-Verzeichnis mit Storage User erstellen
 mkdir -p $BACKUP_DIR
+chown "$STORAGE_USER:$STORAGE_USER" "$BACKUP_DIR"
 
 echo "🎯 CCC CODE STYLE BACKUP: Sichere $STORAGE_ROOT..."
 echo "📍 Backup-Ziel: $BACKUP_FILE"
