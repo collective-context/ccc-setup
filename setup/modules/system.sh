@@ -17,14 +17,18 @@ hostname "$PRIMARY_HOSTNAME"
 echo "127.0.0.1 localhost" > /etc/hosts
 echo "$PUBLIC_IP $PRIMARY_HOSTNAME" >> /etc/hosts
 
-# Zeitzone
-if [ -z "$TIMEZONE" ]; then
-    dpkg-reconfigure -f noninteractive tzdata
-else
+# Zeitzone konsistent setzen
+if [ -n "$TIMEZONE" ]; then
     timedatectl set-timezone "$TIMEZONE"
+elif command -v tzupdate >/dev/null; then
+    log_warning "Automatische Zeitzonenkonfiguration mit tzupdate"
+    tzupdate
+else
+    ln -fs /usr/share/zoneinfo/Europe/Berlin /etc/localtime
+    dpkg-reconfigure -f noninteractive tzdata
 fi
 
-# Swap erstellen wenn wenig RAM (CCC CODE)
+# Swap nur bei Bedarf erstellen (Idempotenter)
 TOTAL_MEMORY=$(grep MemTotal /proc/meminfo | awk '{print $2}')
 TOTAL_MEMORY_MB=$((TOTAL_MEMORY / 1024))
 
@@ -39,12 +43,14 @@ if [ $TOTAL_MEMORY_MB -lt 2000 ]; then
     fi
 fi
 
-# System Update
+# Zentrale Paketinstallation (nur einmal update)
+log_info "Systemaktualisierung durchführen..."
 apt-get update -qq
-apt-get upgrade -y -qq
+DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -qq
 
-# Basis-Pakete
-apt-get install -y -qq \
+# Basis-Pakete installieren mit idempotenter Funktion
+source functions.sh
+install_package \
     curl wget git unzip \
     software-properties-common \
     apt-transport-https \

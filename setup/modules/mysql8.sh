@@ -65,10 +65,8 @@ debconf-set-selections <<< "mysql-server mysql-server/re-root-pass password $DB_
 
 apt-get update -qq
 
-# MySQL installieren
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-    mysql-server-8.0 \
-    mysql-client-8.0
+# Konsistente Paketinstallation mit install_package
+install_package mysql-server-8.0 mysql-client-8.0 libdbd-mysql-perl
 
 if [ $? -ne 0 ]; then
     log_error "MySQL Installation fehlgeschlagen"

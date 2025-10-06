@@ -12,9 +12,39 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Logging
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+# Einheitliches Logging-Format
+log() {
+    local level=$1
+    shift
+    local color="$NC"
+    case $level in
+        INFO) color="$BLUE";;
+        OK) color="$GREEN";;
+        WARN) color="$YELLOW";;
+        ERROR) color="$RED";;
+    esac
+    timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+    echo -e "[${timestamp}] ${color}[$level]${NC} $*" >&2
+}
+
+# Konsistente Wrapper für Logging
+log_info() { log INFO "$*"; }
+log_success() { log OK "$*"; }
+log_error() { log ERROR "$*"; }
+log_warning() { log WARN "$*"; }
+
+# Idempotente Paketinstallation
+install_package() {
+    for pkg in "$@"; do
+        if dpkg -s "$pkg" >/dev/null 2>&1; then
+            log_info "$pkg ist bereits installiert"
+        else
+            log_info "Installiere $pkg..."
+            DEBIAN_FRONTEND=noninteractive apt-get install -y \
+                -qq -o Dpkg::Options::="--force-confold" \
+                --no-install-recommends "$pkg"
+        fi
+    done
 }
 
 log_success() {
