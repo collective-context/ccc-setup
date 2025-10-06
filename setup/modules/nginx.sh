@@ -16,23 +16,67 @@ install_package nginx
 systemctl enable nginx
 systemctl start nginx
 
-# CCC Haupt-Konfiguration erstellen die includes aus Storage Root lädt
+# CCC Haupt-Konfiguration mit erweiterten Sicherheitseinstellungen
 cat > /etc/nginx/sites-available/ccc << 'NGINXMAIN'
-# CCC Commander Haupt-Konfiguration - CCC CODE Pattern
+# CCC Commander Haupt-Konfiguration - CCC CODE Pattern mit Sicherheitsoptimierung
 server {
     listen 80;
     listen [::]:80;
     
+    # Strict Transport Security
+    add_header Strict-Transport-Security "max-age=63072000" always;
+    
+    # Security Headers
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(), midi=(), sync-xhr=(), microphone=(), camera=(), magnetometer=(), gyroscope=(), fullscreen=(self), payment=()" always;
+    
     server_name _;
     root /var/www/html;
     
+    # Buffer Size
+    client_body_buffer_size 10K;
+    client_header_buffer_size 1k;
+    client_max_body_size 32m;
+    large_client_header_buffers 2 1k;
+    
+    # Timeouts
+    client_body_timeout 12;
+    client_header_timeout 12;
+    keepalive_timeout 15;
+    send_timeout 10;
+    
+    # Gzip Kompression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 10240;
+    gzip_proxied expired no-cache no-store private auth;
+    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml;
+    gzip_disable "MSIE [1-6]\.";
+    
     index index.html;
     
-    # CCC CODE Magic: Include aller Konfigs aus Storage Root
+    # CCC CODE Magic: Include aller Konfigs aus Storage Root mit Sicherheitsprüfung
     include /home/user-data/nginx/conf.d/*.conf;
     
-    # Default deny
+    # Default deny mit Logging
     location / {
+        return 404;
+        access_log /var/log/nginx/blocked.log combined;
+    }
+    
+    # Verhindern des Zugriffs auf versteckte Dateien
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+    
+    # PHP-FPM Konfiguration sichern
+    location ~ \.php$ {
         return 404;
     }
 }
