@@ -24,6 +24,12 @@ site_create() {
     local site_type=""
     local wp_type=""
     local proxy_url=""
+    local wp_user="admin"
+    local wp_email="$ADMIN_EMAIL"
+    local wp_title="WordPress Site"
+    
+    # WordPress Passwort generieren
+    local wp_password=$(openssl rand -base64 12)
     
     # Parameter validieren
     if [ "$#" -lt 1 ]; then
