@@ -16,39 +16,39 @@ source /root/ccc/setup/functions.sh
 
 echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
 
-# NGINX Version und Build-Optionen
-NGINX_VERSION="1.28.0"
-
-# NGINX Verzeichnisstruktur (WordOps-Style)
+# NGINX Konfiguration
+NGINX_VERSION="1.24.0"
 NGINX_ROOT="/etc/nginx"
-NGINX_CUSTOM="$NGINX_ROOT/custom"
-NGINX_SITES="$NGINX_ROOT/sites-available"
-NGINX_SITES_ENABLED="$NGINX_ROOT/sites-enabled"
-NGINX_CONF="$NGINX_ROOT/conf.d"
-NGINX_CACHE="/var/cache/nginx"
-NGINX_SSL="$NGINX_ROOT/ssl"
-NGINX_SNIPPETS="$NGINX_ROOT/snippets"
+NGINX_DIRS=(
+    "$NGINX_ROOT/custom"
+    "$NGINX_ROOT/sites-available"
+    "$NGINX_ROOT/sites-enabled"
+    "$NGINX_ROOT/conf.d"
+    "$NGINX_ROOT/ssl"
+    "$NGINX_ROOT/snippets"
+    "/var/cache/nginx"
+    "/var/cache/nginx/fastcgi"
+    "/var/cache/nginx/proxy"
+    "/var/log/nginx"
+)
 
-# Cache und Log Verzeichnisse
-NGINX_CACHE_FASTCGI="$NGINX_CACHE/fastcgi"
-NGINX_CACHE_PROXY="$NGINX_CACHE/proxy"
-NGINX_LOG="/var/log/nginx"
+# NGINX Verzeichnisse vorbereiten
+prepare_nginx_dirs() {
+    # Backup bei Bedarf
+    if [ -d "$NGINX_ROOT" ]; then
+        timestamp=$(date +%Y%m%d_%H%M%S)
+        backup_dir="${NGINX_ROOT}_backup_${timestamp}"
+        mv "$NGINX_ROOT" "$backup_dir"
+        log_info "NGINX Backup erstellt: $backup_dir"
+    fi
 
-# Backup des ursprünglichen NGINX-Verzeichnisses
-if [ -d "$NGINX_ROOT" ]; then
-    timestamp=$(date +%Y%m%d_%H%M%S)
-    mv "$NGINX_ROOT" "${NGINX_ROOT}_backup_${timestamp}"
-    log_info "Backup des ursprünglichen NGINX-Verzeichnisses erstellt: ${NGINX_ROOT}_backup_${timestamp}"
-fi
-
-# Verzeichnisse erstellen und Berechtigungen setzen
-for dir in "$NGINX_CUSTOM" "$NGINX_SITES" "$NGINX_SITES_ENABLED" \
-           "$NGINX_CONF" "$NGINX_CACHE" "$NGINX_SSL" "$NGINX_SNIPPETS" \
-           "$NGINX_CACHE_FASTCGI" "$NGINX_CACHE_PROXY" "$NGINX_LOG"; do
-    mkdir -p "$dir"
-    chown root:root "$dir"
-    chmod 755 "$dir"
-done
+    # Verzeichnisse erstellen
+    for dir in "${NGINX_DIRS[@]}"; do
+        mkdir -p "$dir"
+        chown root:root "$dir"
+        chmod 755 "$dir"
+    done
+}
 
 # Systemvoraussetzungen prüfen
 if ! command -v lsb_release >/dev/null 2>&1; then
@@ -69,47 +69,58 @@ case "$OS_VERSION" in
         ;;
 esac
 
-# WordOps Repository für NGINX
-if [ ! -f /etc/apt/sources.list.d/wordops.list ]; then
-    log_info "Füge WordOps Repository hinzu..."
-    
-    # WordOps Repository Key mit Validierung
-    KEY_URL="https://mirrors.wordops.eu/pub.key"
-    KEY_FINGERPRINT="3B89 F2FB 6162 B6F4 802F  97C6 1B39 4522 E1B1 2CAB"
-    
-    # Key herunterladen und validieren
-    curl -fsSL "$KEY_URL" | gpg --dearmor > /tmp/wordops.gpg
-    if ! gpg --show-keys /tmp/wordops.gpg | grep -q "$KEY_FINGERPRINT"; then
-        log_error "WordOps Repository Key konnte nicht validiert werden"
-        exit 1
-    fi
+# NGINX Repository einrichten
+setup_nginx_repo() {
+    # Offizielles NGINX Repository
+    curl -fsSL https://nginx.org/keys/nginx_signing.key | \
+        gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
 
-    # Validierten Key installieren
-    mv /tmp/wordops.gpg /usr/share/keyrings/wordops-archive-keyring.gpg
+    echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] \
+        http://nginx.org/packages/mainline/$(lsb_release -is | tr '[:upper:]' '[:lower:]')" \
+        "$(lsb_release -cs) nginx" | \
+        sudo tee /etc/apt/sources.list.d/nginx.list
+
+    # Repository Priorität
+    echo -e "Package: *\nPin: origin nginx.org\nPin-Priority: 900" | \
+        sudo tee /etc/apt/preferences.d/99nginx
+}
+
+# NGINX Installation
+install_nginx() {
+    # Repository aktualisieren
+    apt-get update
+
+    # NGINX und Module installieren
+    install_package nginx nginx-extras \
+        ssl-cert \
+        curl wget git \
+        build-essential \
+        libpcre3-dev \
+        zlib1g-dev \
+        libssl-dev
+
+    # NGINX aktivieren und starten
+    systemctl enable nginx
+    systemctl start nginx
+
+    log_success "NGINX Installation abgeschlossen"
+}
+
+# Hauptfunktion
+main() {
+    log_info "Starte NGINX Installation..."
     
-    # Repository mit signiertem Key hinzufügen
-    echo "deb [signed-by=/usr/share/keyrings/wordops-archive-keyring.gpg] https://mirrors.wordops.eu/debian $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/wordops.list
+    setup_nginx_repo
+    prepare_nginx_dirs
+    install_nginx
     
-    # Repository Priorität setzen
-    echo -e "Package: *\nPin: origin mirrors.wordops.eu\nPin-Priority: 900\n" | sudo tee /etc/apt/preferences.d/99wordops
-fi
+    # Basis-Konfiguration erstellen
+    cp -r /usr/share/nginx/conf/* /etc/nginx/
+    
+    log_success "NGINX Setup abgeschlossen"
+}
 
-# NGINX aus WordOps Repository installieren
-apt-get update
-install_package nginx-custom nginx-extras
-
-# Verzeichnisse erstellen und Berechtigungen setzen
-for dir in "$NGINX_CUSTOM" "$NGINX_SITES" "$NGINX_SITES_ENABLED" \
-           "$NGINX_CONF" "$NGINX_CACHE" "$NGINX_SSL" "$NGINX_SNIPPETS" \
-           "$NGINX_CACHE_FASTCGI" "$NGINX_CACHE_PROXY"; do
-    mkdir -p "$dir"
-    chown root:root "$dir"
-    chmod 755 "$dir"
-done
-
-# NGINX Service aktivieren und starten
-systemctl enable nginx
-systemctl start nginx
+main
 
 log_success "NGINX Installation abgeschlossen"
 
