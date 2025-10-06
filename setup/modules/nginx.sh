@@ -202,18 +202,18 @@ install_package nginx-custom nginx-extras
 cp -r /usr/share/wordops/nginx/* /etc/nginx/
 fi
 
-# NGINX Verzeichnisstruktur (WordOps-Style)
-NGINX_CUSTOM="/etc/nginx/custom"
-NGINX_SITES="/etc/nginx/sites-available"
-NGINX_SITES_ENABLED="/etc/nginx/sites-enabled"
-NGINX_CONF="/etc/nginx/conf.d"
-NGINX_CACHE="/var/cache/nginx"
-NGINX_SSL="/etc/nginx/ssl"
-NGINX_SNIPPETS="/etc/nginx/snippets"
-
-# Cache Verzeichnisse
-NGINX_CACHE_FASTCGI="/var/cache/nginx/fastcgi"
-NGINX_CACHE_PROXY="/var/cache/nginx/proxy"
+# NGINX Verzeichnisstruktur
+declare -A NGINX_DIRS=(
+    [custom]="/etc/nginx/custom"
+    [sites]="/etc/nginx/sites-available"
+    [enabled]="/etc/nginx/sites-enabled"
+    [conf]="/etc/nginx/conf.d"
+    [cache]="/var/cache/nginx"
+    [ssl]="/etc/nginx/ssl"
+    [snippets]="/etc/nginx/snippets"
+    [cache_fastcgi]="/var/cache/nginx/fastcgi"
+    [cache_proxy]="/var/cache/nginx/proxy"
+)
 
 # Verzeichnisse erstellen
 mkdir -p "$NGINX_CUSTOM" "$NGINX_SITES" "$NGINX_SITES_ENABLED" \
@@ -273,12 +273,31 @@ install_package build-essential libpcre3-dev zlib1g-dev libssl-dev \
     libgeoip-dev libtool automake autoconf libperl-dev \
     libxslt1-dev libgd-dev libxml2-dev libicu-dev
 
-# NGINX Installation mit essentiellen Modulen
-apt-get update
-install_package nginx nginx-extras \
-    build-essential libpcre3-dev zlib1g-dev libssl-dev \
-    libgeoip-dev libtool automake autoconf libperl-dev \
-    libxslt1-dev libgd-dev libxml2-dev libicu-dev
+# NGINX Installation
+install_nginx() {
+    log_info "Installiere NGINX und erforderliche Module..."
+    
+    apt-get update
+    install_package nginx nginx-extras \
+        build-essential libpcre3-dev zlib1g-dev libssl-dev \
+        libgeoip-dev libtool automake autoconf libperl-dev \
+        libxslt1-dev libgd-dev libxml2-dev libicu-dev
+
+    # Basis-Konfiguration sichern
+    if [ ! -f /etc/nginx/nginx.conf.original ]; then
+        cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.original
+    fi
+
+    systemctl enable nginx
+    systemctl start nginx
+
+    if curl -I http://localhost >/dev/null 2>&1; then
+        log_success "NGINX Installation erfolgreich"
+    else
+        log_error "NGINX Installation fehlgeschlagen"
+        exit 1
+    fi
+}
 
 # NGINX Kompilierungsoptionen für erweiterte Features
 NGINX_BUILD_OPTIONS="
