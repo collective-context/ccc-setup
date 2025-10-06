@@ -10,7 +10,19 @@ source /root/ccc/setup/functions.sh
 
 echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
 
-# NGINX Version und Build-Optionen (WordOps-Style)
+#!/bin/bash
+set -euo pipefail
+##########################################################
+# NGINX Installation - CCC CODE Pattern
+# Basiert auf WordOps (https://wordops.net)
+##########################################################
+
+source /etc/ccc.conf
+source /root/ccc/setup/functions.sh
+
+echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
+
+# NGINX Version und Build-Optionen
 NGINX_VERSION="1.28.0"
 
 # NGINX Verzeichnisstruktur
@@ -25,6 +37,25 @@ NGINX_SNIPPETS="/etc/nginx/snippets"
 # Cache Verzeichnisse
 NGINX_CACHE_FASTCGI="/var/cache/nginx/fastcgi"
 NGINX_CACHE_PROXY="/var/cache/nginx/proxy"
+
+# Systemvoraussetzungen prüfen
+if ! command -v lsb_release >/dev/null 2>&1; then
+    log_info "Installiere lsb-release..."
+    apt-get update
+    apt-get install -y lsb-release
+fi
+
+# OS Version prüfen
+OS_VERSION=$(lsb_release -sc)
+case "$OS_VERSION" in
+    focal|jammy|noble|bullseye|bookworm)
+        log_info "Unterstützte OS Version: $OS_VERSION"
+        ;;
+    *)
+        log_error "Nicht unterstützte OS Version: $OS_VERSION"
+        exit 1
+        ;;
+esac
 
 # WordOps Repository für NGINX
 if [ ! -f /etc/apt/sources.list.d/wordops.list ]; then
