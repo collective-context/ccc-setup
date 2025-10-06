@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Einheitliches Logging-Format
+# Erweitertes Logging-Format mit Trace-ID
 log() {
     local level=$1
     shift
@@ -22,9 +22,23 @@ log() {
         OK) color="$GREEN";;
         WARN) color="$YELLOW";;
         ERROR) color="$RED";;
+        FATAL) color="$RED";;
     esac
+    
+    # Trace-ID für bessere Nachverfolgbarkeit
+    TRACE_ID=${TRACE_ID:-$(openssl rand -hex 8)}
+    
+    # Hostname und PID für bessere Diagnose
+    local hostname=$(hostname -s)
+    local pid=$$
+    
     timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-    echo -e "[${timestamp}] ${color}[$level]${NC} $*" >&2
+    echo -e "[${timestamp}] ${color}[$level]${NC} [$hostname:$pid] [$TRACE_ID] $*" >&2
+    
+    # Kritische Fehler in separate Datei loggen
+    if [[ "$level" == "ERROR" || "$level" == "FATAL" ]]; then
+        echo "[${timestamp}] [$level] [$hostname:$pid] [$TRACE_ID] $*" >> "/var/log/ccc-errors.log"
+    fi
 }
 
 # Konsistente Wrapper für Logging
