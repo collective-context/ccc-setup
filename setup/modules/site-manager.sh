@@ -29,6 +29,81 @@ site_create() {
     local wp_title="WordPress Site"
     local wp_password=$(openssl rand -base64 12)
 
+    # WordOps-Style Kommandos
+    case "$1" in
+        --html)
+            site_type="html"
+            shift
+            ;;
+        --php*)
+            site_type="php"
+            php_version="${1#--php}"
+            shift
+            ;;
+        --mysql)
+            site_type="mysql"
+            shift
+            ;;
+        --wp)
+            site_type="wordpress"
+            shift
+            ;;
+        --wpsubdir)
+            site_type="wordpress"
+            wp_type="subdir"
+            shift
+            ;;
+        --wpsubdomain)
+            site_type="wordpress"
+            wp_type="subdomain"
+            shift
+            ;;
+        --wpfc)
+            cache_type="fastcgi"
+            shift
+            ;;
+        --wpredis)
+            cache_type="redis"
+            shift
+            ;;
+        --wpsc)
+            cache_type="supercache"
+            shift
+            ;;
+        --proxy=*)
+            site_type="proxy"
+            proxy_url="${1#*=}"
+            shift
+            ;;
+    esac
+
+    # WordOps-Style Site Erstellung
+    log_info "Erstelle neue Site: $domain"
+    
+    # Verzeichnisstruktur vorbereiten
+    local site_root="/var/www/$domain"
+    local site_logs="/var/log/nginx/$domain"
+    local site_cache="/var/cache/nginx/proxy_cache/$domain"
+    
+    mkdir -p "$site_root" "$site_logs" "$site_cache"
+    chown -R www-data:www-data "$site_root" "$site_logs" "$site_cache"
+
+    # NGINX Konfiguration erstellen
+    generate_nginx_config "$domain" "$site_type" "$cache_type" "$php_version"
+
+    # SSL Setup wenn gewünscht
+    if [ "$use_ssl" = 1 ]; then
+        setup_ssl "$domain"
+    fi
+
+    # WordPress Setup wenn gewünscht
+    if [[ "$site_type" == "wordpress"* ]]; then
+        setup_wordpress "$domain" "$wp_type" "$wp_user" "$wp_email" "$wp_title" "$wp_password"
+    fi
+
+    log_success "Site $domain wurde erstellt"
+}
+
     # WordOps-Style Site Management
     log_info "Erstelle neue Site: $domain"
     
