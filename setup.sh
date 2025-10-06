@@ -92,21 +92,20 @@ else
     chmod 700 /root/ccc/setup/modules/*.sh
 fi
 
-# Setup-Verzeichnis prüfen
+# Berechtigungen für alle Skripte setzen
+find /root/ccc -type f -name "*.sh" -exec chmod 700 {} \;
+
+# Prüfe ob Setup-Verzeichnis existiert
 if [ ! -d "/root/ccc/setup" ]; then
     log_error "Setup-Verzeichnis nicht gefunden"
     exit 1
 fi
 
-# Berechtigungen setzen
-chmod +x /root/ccc/setup/start.sh
-chmod +x /root/ccc/setup.sh
-
 # Modus erkennen und start.sh entsprechend aufrufen
 if [ -t 0 ]; then
     # Interaktiver Modus (Terminal vorhanden)
     log_info "Starte interaktive Installation..."
-    cd /root/ccc/setup && ./start.sh
+    cd /root/ccc/setup && bash ./start.sh
 else
     # Pipeline-Modus (curl | bash) - nicht-interaktiv mit Standardwerten
     log_info "Pipeline-Modus erkannt - verwende Standardkonfiguration..."
