@@ -7,9 +7,29 @@
 # Relativer Pfad zur Projektwurzel
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-source "${PROJECT_ROOT}/config/ccc.conf"
-source "${PROJECT_ROOT}/setup/functions.sh"
-source "${PROJECT_ROOT}/setup/modules/nginx.sh"
+# Konfiguration laden
+if [ -f "${PROJECT_ROOT}/config/ccc.conf" ]; then
+    source "${PROJECT_ROOT}/config/ccc.conf"
+else
+    echo "Fehler: Konfigurationsdatei nicht gefunden"
+    exit 1
+fi
+
+# Funktionen laden
+if [ -f "${PROJECT_ROOT}/setup/functions.sh" ]; then
+    source "${PROJECT_ROOT}/setup/functions.sh"
+else
+    echo "Fehler: Funktionsdatei nicht gefunden"
+    exit 1
+fi
+
+# NGINX Modul laden
+if [ -f "${PROJECT_ROOT}/setup/modules/nginx.sh" ]; then
+    source "${PROJECT_ROOT}/setup/modules/nginx.sh"
+else
+    echo "Fehler: NGINX Modul nicht gefunden"
+    exit 1
+fi
 
 test_nginx_installation() {
     log_info "Teste NGINX Installation..."

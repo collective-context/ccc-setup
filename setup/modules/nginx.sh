@@ -8,11 +8,14 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-# Abhängigkeiten prüfen
-REQUIRED_PACKAGES="curl wget git build-essential"
+# Projektverzeichnis ermitteln
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-source /etc/ccc.conf
-source /root/ccc/setup/functions.sh
+# Abhängigkeiten
+packages="curl wget git build-essential"
+
+source "${PROJECT_ROOT}/config/ccc.conf"
+source "${PROJECT_ROOT}/setup/functions.sh"
 
 echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
 
