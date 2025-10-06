@@ -13,18 +13,35 @@ echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
 # NGINX Version und Build-Optionen (WordOps-Style)
 NGINX_VERSION="1.28.0"
 
-# WordOps Repository für NGINX hinzufügen
-if [ ! -f /etc/apt/sources.list.d/wordops.list ]; then
-    curl -sL https://mirrors.wordops.eu/pub.key | apt-key add -
-    echo "deb https://mirrors.wordops.eu/debian $(lsb_release -sc) main" > /etc/apt/sources.list.d/wordops.list
+# NGINX Repository hinzufügen
+if [ ! -f /etc/apt/sources.list.d/nginx.list ]; then
+    curl -fsSL https://nginx.org/keys/nginx_signing.key | gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
+    echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/mainline/ubuntu $(lsb_release -cs) nginx" | sudo tee /etc/apt/sources.list.d/nginx.list
 fi
 
-# NGINX aus WordOps Repository installieren
+# NGINX Installation
 apt-get update
-install_package nginx-custom nginx-extras
+install_package nginx nginx-module-geoip nginx-module-image-filter nginx-module-njs nginx-module-xslt
 
-# NGINX Module und Konfigurationen von WordOps übernehmen
-cp -r /usr/share/wordops/nginx/* /etc/nginx/
+# NGINX Module kompilieren
+cd /usr/local/src
+git clone https://github.com/google/ngx_brotli.git
+cd ngx_brotli && git submodule update --init
+cd /usr/local/src
+git clone https://github.com/vozlt/nginx-module-vts.git
+git clone https://github.com/openresty/headers-more-nginx-module.git
+
+# NGINX neu kompilieren mit zusätzlichen Modulen
+apt-get source nginx
+cd nginx-$NGINX_VERSION
+./configure --add-module=/usr/local/src/ngx_brotli \
+           --add-module=/usr/local/src/nginx-module-vts \
+           --add-module=/usr/local/src/headers-more-nginx-module \
+           --with-http_v2_module \
+           --with-http_ssl_module \
+           --with-http_gzip_static_module
+make
+make install
 
 # NGINX Kompilierungsoptionen
 CFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -fPIC"
