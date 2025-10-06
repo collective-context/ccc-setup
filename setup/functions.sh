@@ -5,12 +5,49 @@ set -euo pipefail
 # setup/functions.sh
 ##########################################################
 
-# Farben
+# Farben und Logging-Konfiguration
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
+
+# Sicherheits-Konfiguration
+readonly LOG_FILE="/var/log/ccc-setup.log"
+readonly ERROR_LOG="/var/log/ccc-errors.log"
+readonly MAX_RETRIES=3
+readonly SECURE_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# Strict Mode für bessere Fehlerbehandlung
+set -euo pipefail
+IFS=$'\n\t'
+
+# Trap für Fehlerbehandlung
+trap 'error_handler $? $LINENO $BASH_LINENO "$BASH_COMMAND" $(printf "::%s" ${FUNCNAME[@]:-})' ERR
+
+# Fehlerbehandlung
+error_handler() {
+    local exit_code=$1
+    local line_no=$2
+    local bash_lineno=$3
+    local last_command=$4
+    local func_trace=$5
+    
+    echo -e "${RED}[FATAL ERROR]${NC} in ${BASH_SOURCE[1]}:$line_no" >&2
+    echo -e "${RED}Letzter Befehl:${NC} $last_command" >&2
+    echo -e "${RED}Stacktrace:${NC} $func_trace" >&2
+    
+    # In Error Log schreiben
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [FATAL] Exit $exit_code in ${BASH_SOURCE[1]}:$line_no - $last_command" >> "$ERROR_LOG"
+    
+    # Bei kritischen Fehlern Backup erstellen
+    if [ -d "$STORAGE_ROOT" ]; then
+        echo -e "${YELLOW}[WARN]${NC} Erstelle Backup vor Abbruch..." >&2
+        /usr/local/bin/ccc-backup emergency_$(date +%s) || true
+    fi
+    
+    exit $exit_code
+}
 
 # Erweitertes Logging-Format mit Trace-ID
 log() {
