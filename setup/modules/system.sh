@@ -65,13 +65,18 @@ install_package \
     rsync \
     cron
 
-# Erweiterte Firewall-Konfiguration mit Systemhärtung und Audit
+# Erweiterte Firewall-Konfiguration mit Systemhärtung, Audit und IDS
 ufw --force disable  # Erstmal aus für Installation
 ufw default deny incoming
 ufw default allow outgoing
 
-# SSH Härtung mit erweiterten Sicherheitseinstellungen
-ufw limit 22/tcp comment 'SSH with rate limiting'
+# Intrusion Detection System
+install_package aide
+/usr/sbin/aideinit
+/usr/sbin/aide --update
+
+# SSH Härtung mit maximaler Sicherheit
+ufw limit 22/tcp comment 'SSH with strict rate limiting'
 sed -i 's/#PermitRootLogin yes/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
 sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
 sed -i 's/#MaxAuthTries.*/MaxAuthTries 3/' /etc/ssh/sshd_config
