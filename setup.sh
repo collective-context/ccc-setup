@@ -105,7 +105,13 @@ fi
 if [ -t 0 ]; then
     # Interaktiver Modus (Terminal vorhanden)
     log_info "Starte interaktive Installation..."
-    cd /root/ccc/setup && bash ./start.sh
+    cd /root/ccc/setup || exit 1
+    if [ -x "./start.sh" ]; then
+        ./start.sh
+    else
+        log_error "start.sh ist nicht ausführbar"
+        exit 1
+    fi
 else
     # Pipeline-Modus (curl | bash) - nicht-interaktiv mit Standardwerten
     log_info "Pipeline-Modus erkannt - verwende Standardkonfiguration..."
@@ -123,5 +129,11 @@ else
     log_info "  Komponenten: $INSTALL_COMPONENTS"
     
     # Im nicht-interaktiven Modus starten
-    cd /root/ccc/setup && ./start.sh --non-interactive
+    cd /root/ccc/setup || exit 1
+    if [ -x "./start.sh" ]; then
+        ./start.sh --non-interactive
+    else
+        log_error "start.sh ist nicht ausführbar"
+        exit 1
+    fi
 fi
