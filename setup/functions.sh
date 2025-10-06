@@ -33,7 +33,7 @@ IFS=$'\n\t'
 # Trap für Fehlerbehandlung
 trap 'error_handler $? $LINENO $BASH_LINENO "$BASH_COMMAND" $(printf "::%s" ${FUNCNAME[@]:-})' ERR
 
-# Fehlerbehandlung
+# Erweiterte Fehlerbehandlung mit Backup und Wiederherstellung
 error_handler() {
     local exit_code=$1
     local line_no=$2
@@ -41,18 +41,49 @@ error_handler() {
     local last_command=$4
     local func_trace=$5
     
+    # Detaillierte Fehlerinformationen
     echo -e "${RED}[FATAL ERROR]${NC} in ${BASH_SOURCE[1]}:$line_no" >&2
     echo -e "${RED}Letzter Befehl:${NC} $last_command" >&2
     echo -e "${RED}Stacktrace:${NC} $func_trace" >&2
+    echo -e "${RED}Exit Code:${NC} $exit_code" >&2
     
-    # In Error Log schreiben
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [FATAL] Exit $exit_code in ${BASH_SOURCE[1]}:$line_no - $last_command" >> "$ERROR_LOG"
+    # System Status sammeln
+    local disk_space=$(df -h / | awk 'NR==2 {print $4}')
+    local memory_free=$(free -h | awk '/^Mem:/ {print $4}')
+    local load_avg=$(uptime | awk -F'load average:' '{print $2}')
     
-    # Bei kritischen Fehlern Backup erstellen
+    # Erweiterte Logging
+    {
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [FATAL] Exit $exit_code in ${BASH_SOURCE[1]}:$line_no"
+        echo "Command: $last_command"
+        echo "Trace: $func_trace"
+        echo "System Status:"
+        echo "- Disk Space: $disk_space"
+        echo "- Free Memory: $memory_free"
+        echo "- Load Average: $load_avg"
+        echo "Environment:"
+        env | grep -E '^(PATH|STORAGE_ROOT|USER|PWD)='
+    } >> "$ERROR_LOG"
+    
+    # Automatisches Backup und Wiederherstellung
     if [ -d "$STORAGE_ROOT" ]; then
-        echo -e "${YELLOW}[WARN]${NC} Erstelle Backup vor Abbruch..." >&2
-        /usr/local/bin/ccc-backup emergency_$(date +%s) || true
+        echo -e "${YELLOW}[WARN]${NC} Erstelle Notfall-Backup..." >&2
+        
+        # Backup mit Zeitstempel
+        local backup_name="emergency_$(date +%Y%m%d_%H%M%S)"
+        if /usr/local/bin/ccc-backup "$backup_name"; then
+            echo -e "${GREEN}[OK]${NC} Backup erstellt: $backup_name" >&2
+            
+            # Wiederherstellungshinweise
+            echo -e "${YELLOW}[INFO]${NC} Wiederherstellung mit:" >&2
+            echo "ccc-restore $STORAGE_ROOT/backups/ccc-$backup_name.tar.gz" >&2
+        else
+            echo -e "${RED}[ERROR]${NC} Backup fehlgeschlagen!" >&2
+        fi
     fi
+    
+    # Stack Trace in separate Datei
+    echo "$func_trace" > "$ERROR_LOG.trace"
     
     exit $exit_code
 }
