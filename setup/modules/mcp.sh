@@ -9,18 +9,28 @@ source /root/ccc/setup/functions.sh
 
 echo -e "${BLUE}[MODULE]${NC} MCP Installation (CCC CODE Style)..."
 
-# MCP Configuration in Storage Root mit Sicherheitseinstellungen
+# MCP Configuration in Storage Root mit erweiterten Sicherheitseinstellungen
 MCP_DIR="$STORAGE_ROOT/tools/mcp"
 MCP_CONFIG="$STORAGE_ROOT/config/mcp"
 MCP_SERVERS_DIR="$STORAGE_ROOT/tools/mcp/servers"
 MCP_LOG_DIR="$STORAGE_ROOT/logs/mcp"
 MCP_AUDIT_DIR="$STORAGE_ROOT/logs/audit/mcp"
+MCP_SECRETS_DIR="$STORAGE_ROOT/secrets/mcp"
+MCP_BACKUP_DIR="$STORAGE_ROOT/backups/mcp"
 
-# Sicherheitseinstellungen
+# Erweiterte Sicherheitseinstellungen
 readonly MCP_DIR_MODE=750
 readonly MCP_FILE_MODE=640
 readonly MCP_LOG_MODE=640
 readonly MCP_AUDIT_MODE=600
+readonly MCP_SECRETS_MODE=600
+readonly MCP_BACKUP_MODE=600
+
+# Sicherheits-Limits
+readonly MCP_MAX_CONNECTIONS=10
+readonly MCP_REQUEST_TIMEOUT=30
+readonly MCP_MAX_REQUEST_SIZE=1048576  # 1MB
+readonly MCP_RATE_LIMIT="60/minute"
 
 # Verzeichnisse erstellen
 mkdir -p "$MCP_DIR" "$MCP_CONFIG" "$MCP_SERVERS_DIR"
