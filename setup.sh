@@ -86,7 +86,7 @@ else
     export PRIMARY_HOSTNAME=$(hostname -f 2>/dev/null || hostname || echo "localhost")
     export ADMIN_EMAIL="admin@${PRIMARY_HOSTNAME}"
     export INSTALL_MODE="nginx"
-    export INSTALL_COMPONENTS="nginx"
+    export INSTALL_COMPONENTS="nginx,ssl,site-manager"
     
     log_info "Verwende Standardwerte:"
     log_info "  Hostname: $PRIMARY_HOSTNAME"

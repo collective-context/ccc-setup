@@ -245,17 +245,12 @@ install_package build-essential libpcre3-dev zlib1g-dev libssl-dev \
     libgeoip-dev libtool automake autoconf libperl-dev \
     libxslt1-dev libgd-dev libxml2-dev libicu-dev
 
-# NGINX aus WordOps Repository installieren
+# NGINX Installation mit essentiellen Modulen
 apt-get update
-install_package nginx-custom nginx-extras
-
-# NGINX Module und Konfigurationen von WordOps übernehmen
-cp -r /usr/share/wordops/nginx/* /etc/nginx/
-
-# WordOps-Style NGINX Module
-install_package build-essential libpcre3-dev zlib1g-dev libssl-dev \
-                libgeoip-dev libtool automake autoconf libperl-dev \
-                libxslt1-dev libgd-dev libxml2-dev libicu-dev
+install_package nginx nginx-extras \
+    build-essential libpcre3-dev zlib1g-dev libssl-dev \
+    libgeoip-dev libtool automake autoconf libperl-dev \
+    libxslt1-dev libgd-dev libxml2-dev libicu-dev
 
 # NGINX Kompilierungsoptionen für erweiterte Features
 NGINX_BUILD_OPTIONS="
