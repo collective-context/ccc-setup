@@ -1,9 +1,13 @@
 ##########################################################
-# CCC Commander Bootstrap Script # /setup.sh
-# GitHub: https://github.com/collective-context/ccc-setup/
+# CCC Commander Bootstrap Script
+# Inspiriert von WordOps (https://wordops.net)
 # 
 # Installation:
 #   curl -sL https://raw.githubusercontent.com/collective-context/ccc-setup/main/setup.sh | sudo -E bash
+#
+# Unterstützte Systeme:
+#   - Ubuntu 22.04/24.04 LTS
+#   - Debian 11/12/13
 ##########################################################
 
 #!/bin/bash
