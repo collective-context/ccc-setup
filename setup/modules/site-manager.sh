@@ -5,10 +5,20 @@ set -euo pipefail
 source /etc/ccc.conf
 source /root/ccc/setup/functions.sh
 
-# Site Management Konfiguration
+# Site Management Konfiguration (WordOps-Style)
 SITES_AVAILABLE="/etc/nginx/sites-available"
 SITES_ENABLED="/etc/nginx/sites-enabled"
 NGINX_CUSTOM="/etc/nginx/custom"
+NGINX_CACHE="/var/cache/nginx"
+NGINX_SSL="/etc/nginx/ssl"
+NGINX_SNIPPETS="/etc/nginx/snippets"
+
+# Cache Verzeichnisse
+NGINX_CACHE_FASTCGI="/var/cache/nginx/fastcgi"
+NGINX_CACHE_PROXY="/var/cache/nginx/proxy"
+
+# PHP Versionen
+PHP_VERSIONS=("7.4" "8.0" "8.1" "8.2" "8.3")
 PHP_VERSIONS=("7.4" "8.0" "8.1" "8.2" "8.3")
 
 # Verzeichnisse erstellen
