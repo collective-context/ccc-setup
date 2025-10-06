@@ -27,9 +27,36 @@ site_create() {
     local wp_user="admin"
     local wp_email="$ADMIN_EMAIL"
     local wp_title="WordPress Site"
-    
-    # WordPress Passwort generieren
     local wp_password=$(openssl rand -base64 12)
+    
+    # WordPress Installation vorbereiten
+    if [[ "$site_type" == "wordpress"* ]]; then
+        # WP-CLI installieren falls nicht vorhanden
+        if ! command -v wp &> /dev/null; then
+            curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+            chmod +x wp-cli.phar
+            mv wp-cli.phar /usr/local/bin/wp
+        fi
+        
+        # WordPress herunterladen
+        wp core download --path="/var/www/$domain" --locale=de_DE
+        
+        # WordPress konfigurieren
+        wp core config --path="/var/www/$domain" \
+            --dbname="$DB_NAME" \
+            --dbuser="$DB_USER" \
+            --dbpass="$DB_PASS" \
+            --dbhost=localhost \
+            --locale=de_DE
+            
+        # WordPress installieren
+        wp core install --path="/var/www/$domain" \
+            --url="https://$domain" \
+            --title="$wp_title" \
+            --admin_user="$wp_user" \
+            --admin_password="$wp_password" \
+            --admin_email="$wp_email"
+    fi
     
     # Parameter validieren
     if [ "$#" -lt 1 ]; then
