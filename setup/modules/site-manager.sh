@@ -29,6 +29,45 @@ site_create() {
     local wp_title="WordPress Site"
     local wp_password=$(openssl rand -base64 12)
     
+    # WordPress CLI Wrapper erstellen
+    cat > /usr/local/bin/ccc-wp << 'WPSCRIPT'
+#!/bin/bash
+source /etc/ccc.conf
+
+# WordPress CLI mit Storage Root Integration
+wp_wrapper() {
+    local domain=$1
+    shift
+    
+    cd "/var/www/$domain" || exit 1
+    sudo -u "$STORAGE_USER" wp "$@"
+}
+
+case "$1" in
+    install)
+        domain=$2
+        shift 2
+        wp_wrapper "$domain" core install "$@"
+        ;;
+    update)
+        domain=$2
+        shift 2
+        wp_wrapper "$domain" core update "$@"
+        ;;
+    plugin)
+        domain=$2
+        shift 2
+        wp_wrapper "$domain" plugin "$@"
+        ;;
+    *)
+        echo "Verwendung: ccc-wp {install|update|plugin} domain [options]"
+        exit 1
+        ;;
+esac
+WPSCRIPT
+
+    chmod +x /usr/local/bin/ccc-wp
+    
     # CLI Wrapper für einfachere Verwendung
     cat > /usr/local/bin/ccc-site << 'SITEWRAPPER'
 #!/bin/bash
