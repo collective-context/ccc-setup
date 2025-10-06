@@ -17,20 +17,22 @@ export NCURSES_NO_UTF8_ACS=1
 
 # Parameter verarbeiten
 NON_INTERACTIVE=0
-if [ "$1" = "--non-interactive" ]; then
+if [ "${1:-}" = "--non-interactive" ]; then
     NON_INTERACTIVE=1
-    echo -e "${BLUE}[INFO]${NC} Nicht-interaktiver Modus..."
+    log_info "Nicht-interaktiver Modus aktiviert"
 fi
 
 # Funktionen laden
 source functions.sh
+log_info "functions.sh geladen"
 
 # Preflight Checks zuerst
 source preflight.sh
+log_info "preflight.sh abgeschlossen"
 
 # Konfigurationsdatei checken (zweiter Durchlauf)
 if [ -f /etc/ccc.conf ]; then
-    echo -e "${BLUE}[INFO]${NC} Existierende Installation gefunden. Update-Modus..."
+    log_info "Existierende Installation gefunden. Update-Modus..."
     
     # Vorherige Konfiguration sicher laden (nur Variablen, keine Kommentare)
     if grep -E '^[A-Za-z_][A-Za-z0-9_]*=' /etc/ccc.conf > /tmp/ccc.prev.conf 2>/dev/null; then
@@ -42,13 +44,14 @@ if [ -f /etc/ccc.conf ]; then
             fi
         done < /tmp/ccc.prev.conf
         rm -f /tmp/ccc.prev.conf
+        log_info "Vorherige Konfiguration geladen"
     else
-        echo -e "${YELLOW}[WARN]${NC} Konfigurationsdatei konnte nicht geladen werden"
+        log_warning "Konfigurationsdatei konnte nicht geladen werden"
     fi
     
     UPDATE_MODE=1
 else
-    echo -e "${BLUE}[INFO]${NC} Neue Installation..."
+    log_info "Neue Installation..."
     FIRST_TIME_SETUP=1
 fi
 
@@ -113,39 +116,54 @@ INSTALL_COMPONENTS=$INSTALL_COMPONENTS
 EOF
 
 # Installationsfortschritt
-echo -e "${GREEN}[INSTALL]${NC} Starte modulare Installation..."
+log_info "Starte modulare Installation..."
 
 # System Basis
 source modules/system.sh
+log_info "system.sh abgeschlossen"
 
 # ✅ CCC-CODE MODULE: Alles landet in $STORAGE_ROOT
 source modules/mysql8.sh          # → $STORAGE_ROOT/mysql
+log_info "mysql8.sh abgeschlossen"
 source modules/nodejs.sh          # Node.js für Ghost
+log_info "nodejs.sh abgeschlossen"
 source modules/nginx.sh           # → $STORAGE_ROOT/nginx
+log_info "nginx.sh abgeschlossen"
 source modules/ssl.sh             # → $STORAGE_ROOT/ssl
+log_info "ssl.sh abgeschlossen"
 
 # Developer Tools
 source modules/tmux.sh           # TMUX Terminal Multiplexer
+log_info "tmux.sh abgeschlossen"
 source modules/aider.sh          # AI Coding Assistant
+log_info "aider.sh abgeschlossen"
 source modules/mcp.sh            # Model Context Protocol
+log_info "mcp.sh abgeschlossen"
 source modules/fastmcp.sh        # FastMCP Framework
+log_info "fastmcp.sh abgeschlossen"
 source modules/langgraph.sh      # LangGraph Agent Orchestration
+log_info "langgraph.sh abgeschlossen"
 source modules/libtmux.sh        # libtmux Python ORM
+log_info "libtmux.sh abgeschlossen"
 
 # Anwendungen
 if [[ "$INSTALL_COMPONENTS" == *"ghost"* ]]; then
     source modules/ghost.sh       # → $STORAGE_ROOT/www/ghost
+    log_info "ghost.sh abgeschlossen"
 fi
 
 if [[ "$INSTALL_COMPONENTS" == *"bookstack"* ]]; then
     source modules/bookstack.sh   # → $STORAGE_ROOT/www/bookstack
+    log_info "bookstack.sh abgeschlossen"
 fi
 
 # Finale Konfiguration
 source modules/finalize.sh
+log_info "finalize.sh abgeschlossen"
 
 # ✅✅✅ CCC CODE BACKUP MAGIE: Backup-Script das NUR $STORAGE_ROOT sichert
 create_backup_script
+log_info "Backup-Script erstellt"
 
 # Success Message
 echo -e "${GREEN}"
@@ -170,3 +188,4 @@ echo ""
 echo -e "${BLUE}User-Daten Verzeichnis:${NC} $STORAGE_ROOT"
 echo -e "${BLUE}Konfiguration:${NC} /etc/ccc.conf"
 echo ""
+log_info "Installation erfolgreich abgeschlossen"
