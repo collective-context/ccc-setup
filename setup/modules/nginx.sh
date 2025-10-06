@@ -99,11 +99,22 @@ install_nginx() {
         zlib1g-dev \
         libssl-dev
 
+    # Basis-Konfiguration erstellen
+    if [ ! -f /etc/nginx/nginx.conf.original ]; then
+        cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.original
+    fi
+
     # NGINX aktivieren und starten
     systemctl enable nginx
     systemctl start nginx
 
-    log_success "NGINX Installation abgeschlossen"
+    # Test der Installation
+    if curl -I http://localhost >/dev/null 2>&1; then
+        log_success "NGINX Installation und Test erfolgreich"
+    else
+        log_error "NGINX Test fehlgeschlagen"
+        exit 1
+    fi
 }
 
 # Hauptfunktion
