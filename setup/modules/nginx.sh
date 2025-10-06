@@ -13,7 +13,7 @@ echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
 # NGINX Version und Build-Optionen
 NGINX_VERSION="1.28.0"
 
-# NGINX Verzeichnisstruktur
+# NGINX Verzeichnisstruktur (WordOps-Style)
 NGINX_CUSTOM="/etc/nginx/custom"
 NGINX_SITES="/etc/nginx/sites-available"
 NGINX_SITES_ENABLED="/etc/nginx/sites-enabled"
@@ -22,9 +22,10 @@ NGINX_CACHE="/var/cache/nginx"
 NGINX_SSL="/etc/nginx/ssl"
 NGINX_SNIPPETS="/etc/nginx/snippets"
 
-# Cache Verzeichnisse
+# Cache und Log Verzeichnisse
 NGINX_CACHE_FASTCGI="/var/cache/nginx/fastcgi"
 NGINX_CACHE_PROXY="/var/cache/nginx/proxy"
+NGINX_LOG="/var/log/nginx"
 
 # Systemvoraussetzungen prüfen
 if ! command -v lsb_release >/dev/null 2>&1; then
