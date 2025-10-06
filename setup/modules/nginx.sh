@@ -182,6 +182,7 @@ main() {
     log_info "- Brotli Kompression"
     log_info "- FastCGI Cache"
     log_info "- PageSpeed Module"
+    log_info "- Erweiterte Sicherheit"
 }
 
 main
