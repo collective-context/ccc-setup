@@ -13,11 +13,21 @@ echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
 # NGINX Version und Build-Optionen (WordOps-Style)
 NGINX_VERSION="1.28.0"
 
-# WordOps NGINX Repository hinzufügen
+# NGINX Repository von WordOps
 if [ ! -f /etc/apt/sources.list.d/wordops.list ]; then
-    curl -sL https://mirrors.wordops.eu/pub.key | apt-key add -
-    echo "deb https://mirrors.wordops.eu/debian $(lsb_release -sc) main" > /etc/apt/sources.list.d/wordops.list
+    # WordOps Repository Key
+    curl -sL https://mirrors.wordops.eu/pub.key | gpg --dearmor | sudo tee /usr/share/keyrings/wordops-archive-keyring.gpg >/dev/null
+    
+    # Repository mit signiertem Key hinzufügen
+    echo "deb [signed-by=/usr/share/keyrings/wordops-archive-keyring.gpg] https://mirrors.wordops.eu/debian $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/wordops.list
 fi
+
+# NGINX Verzeichnisstruktur (WordOps-Style)
+NGINX_CUSTOM="/etc/nginx/custom"
+NGINX_SITES="/etc/nginx/sites-available"
+NGINX_SITES_ENABLED="/etc/nginx/sites-enabled"
+NGINX_CONF="/etc/nginx/conf.d"
+NGINX_CACHE="/var/cache/nginx"
 
 # NGINX Installation
 apt-get update
