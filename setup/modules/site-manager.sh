@@ -16,6 +16,12 @@ mkdir -p "$SITES_AVAILABLE" "$SITES_ENABLED" "$NGINX_CUSTOM"
 
 # Site Management Funktionen (WordOps-Style)
 site_create() {
+    # Parameter validieren
+    if [ "$#" -lt 1 ]; then
+        log_error "Verwendung: site_create <domain> [--wp|--wpsubdir|--wpsubdomain] [--php VERSION] [--ssl] [--wpfc|--wpredis|--wpsc]"
+        return 1
+    fi
+
     local domain=$1
     shift
     local php_version="8.3"
@@ -28,6 +34,49 @@ site_create() {
     local wp_email="$ADMIN_EMAIL"
     local wp_title="WordPress Site"
     local wp_password=$(openssl rand -base64 12)
+
+    # WordOps-Style Parameter Parser
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --php*)
+                php_version="${1#--php}"
+                shift
+                ;;
+            --ssl|--le)
+                use_ssl=1
+                shift
+                ;;
+            --wp)
+                site_type="wordpress"
+                shift
+                ;;
+            --wpsubdir)
+                site_type="wordpress"
+                wp_type="subdir"
+                shift
+                ;;
+            --wpsubdomain)
+                site_type="wordpress"
+                wp_type="subdomain"
+                shift
+                ;;
+            --wpfc)
+                cache_type="fastcgi"
+                shift
+                ;;
+            --wpredis)
+                cache_type="redis"
+                shift
+                ;;
+            --wpsc)
+                cache_type="supercache"
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
 
     # WordOps-Style Site Management
     log_info "Erstelle neue Site: $domain"
