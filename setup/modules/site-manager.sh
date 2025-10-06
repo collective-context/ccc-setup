@@ -44,6 +44,31 @@ site_create() {
         return 1
     fi
 
+    # WordOps-Style Site Management
+    log_info "Erstelle neue Site: $domain"
+
+    # Prüfe ob NGINX und PHP installiert sind
+    for cmd in nginx php mysql; do
+        if ! command -v $cmd >/dev/null 2>&1; then
+            log_error "$cmd ist nicht installiert. Bitte zuerst $cmd installieren."
+            return 1
+        fi
+    done
+
+    # Prüfe ob die benötigten Verzeichnisse existieren
+    for dir in "$SITES_AVAILABLE" "$SITES_ENABLED" "$NGINX_CUSTOM"; do
+        if [ ! -d "$dir" ]; then
+            mkdir -p "$dir"
+            log_info "Verzeichnis $dir erstellt"
+        fi
+    done
+
+    # Prüfe ob die Domain bereits existiert
+    if [ -f "$SITES_AVAILABLE/$domain" ]; then
+        log_error "Site $domain existiert bereits"
+        return 1
+    fi
+
     # Prüfe ob NGINX und PHP installiert sind
     for cmd in nginx php mysql; do
         if ! command -v $cmd >/dev/null 2>&1; then
