@@ -40,6 +40,25 @@ if [ ! -f /etc/apt/sources.list.d/wordops.list ]; then
         log_error "WordOps Repository Key konnte nicht validiert werden"
         exit 1
     fi
+
+    # Systemvoraussetzungen prüfen
+    if ! command -v lsb_release >/dev/null 2>&1; then
+        log_info "Installiere lsb-release..."
+        apt-get update
+        apt-get install -y lsb-release
+    fi
+
+    # OS Version prüfen
+    OS_VERSION=$(lsb_release -sc)
+    case "$OS_VERSION" in
+        focal|jammy|noble|bullseye|bookworm)
+            log_info "Unterstützte OS Version: $OS_VERSION"
+            ;;
+        *)
+            log_error "Nicht unterstützte OS Version: $OS_VERSION"
+            exit 1
+            ;;
+    esac
     
     # Validierten Key installieren
     mv /tmp/wordops.gpg /usr/share/keyrings/wordops-archive-keyring.gpg
