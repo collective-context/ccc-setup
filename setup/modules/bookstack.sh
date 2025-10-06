@@ -28,7 +28,7 @@ add-apt-repository -y ppa:ondrej/php
 install_package php8.3 php8.3-fpm php8.3-curl php8.3-mbstring php8.3-ldap \
     php8.3-xml php8.3-zip php8.3-gd php8.3-mysql php8.3-tokenizer php8.3-bcmath
 
-# PHP-FPM Pool für BookStack (als Storage User)
+# PHP-FPM Pool für BookStack mit erweiterten Sicherheitseinstellungen
 mkdir -p /etc/php/8.3/fpm/pool.d/
 cat > /etc/php/8.3/fpm/pool.d/bookstack.conf << PHPFPM
 [bookstack]
@@ -37,13 +37,35 @@ group = $STORAGE_USER
 listen = /var/run/php/php8.3-fpm-bookstack.sock
 listen.owner = www-data
 listen.group = www-data
+listen.mode = 0660
+
+# Process Manager Einstellungen
 pm = dynamic
 pm.max_children = 5
 pm.start_servers = 2
 pm.min_spare_servers = 1
 pm.max_spare_servers = 3
+pm.max_requests = 500
+
+# Timeouts und Limits
+request_terminate_timeout = 60s
+php_admin_value[max_execution_time] = 60
+php_admin_value[max_input_time] = 60
+php_admin_value[memory_limit] = 256M
 php_admin_value[upload_max_filesize] = 32M
 php_admin_value[post_max_size] = 32M
+
+# Sicherheitseinstellungen
+php_admin_flag[allow_url_fopen] = off
+php_admin_flag[allow_url_include] = off
+php_admin_flag[expose_php] = off
+php_admin_value[session.cookie_httponly] = 1
+php_admin_value[session.cookie_secure] = 1
+php_admin_value[session.use_strict_mode] = 1
+php_admin_value[opcache.enable] = 1
+php_admin_value[opcache.enable_cli] = 0
+php_admin_value[opcache.validate_timestamps] = 1
+php_admin_value[opcache.revalidate_freq] = 2
 PHPFPM
 
 systemctl enable php8.3-fpm
