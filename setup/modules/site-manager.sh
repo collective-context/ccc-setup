@@ -29,6 +29,34 @@ site_create() {
     local wp_title="WordPress Site"
     local wp_password=$(openssl rand -base64 12)
 
+    # WordOps-Style Site Management
+    log_info "Erstelle neue Site: $domain"
+    
+    # Verzeichnisstruktur nach WordOps
+    local site_root="/var/www/$domain"
+    local site_logs="/var/log/nginx/$domain"
+    local site_cache="/var/cache/nginx/proxy_cache/$domain"
+    local site_backup="/var/www/backup/$domain"
+    
+    mkdir -p "$site_root" "$site_logs" "$site_cache" "$site_backup"
+    chown -R www-data:www-data "$site_root" "$site_logs" "$site_cache"
+    
+    # PHP-FPM Pool nach WordOps-Style
+    create_php_pool "$domain" "$php_version"
+    
+    # NGINX Config nach WordOps
+    create_nginx_config "$domain" "$site_type" "$cache_type"
+    
+    # SSL Setup wenn gewünscht
+    if [ "$use_ssl" = 1 ]; then
+        setup_ssl "$domain"
+    fi
+
+    # WordPress Installation wenn gewünscht
+    if [[ "$site_type" == "wordpress"* ]]; then
+        install_wordpress "$domain" "$wp_type" "$cache_type"
+    fi
+
     # WordOps-Style Kommandos für PHP-Version
     for version in 7.4 8.0 8.1 8.2 8.3; do
         if [ ! -d "/etc/php/$version" ]; then
