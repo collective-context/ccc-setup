@@ -26,6 +26,22 @@ NGINX_SNIPPETS="/etc/nginx/snippets"
 NGINX_CACHE_FASTCGI="/var/cache/nginx/fastcgi"
 NGINX_CACHE_PROXY="/var/cache/nginx/proxy"
 
+# WordOps Repository für NGINX
+if [ ! -f /etc/apt/sources.list.d/wordops.list ]; then
+    # WordOps Repository Key
+    curl -sL https://mirrors.wordops.eu/pub.key | gpg --dearmor | sudo tee /usr/share/keyrings/wordops-archive-keyring.gpg >/dev/null
+    
+    # Repository mit signiertem Key hinzufügen
+    echo "deb [signed-by=/usr/share/keyrings/wordops-archive-keyring.gpg] https://mirrors.wordops.eu/debian $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/wordops.list
+    
+    # Repository Priorität setzen
+    echo -e "Package: *\nPin: origin mirrors.wordops.eu\nPin-Priority: 900\n" | sudo tee /etc/apt/preferences.d/99wordops
+fi
+
+# NGINX aus WordOps Repository installieren
+apt-get update
+install_package nginx-custom nginx-extras
+
 # Verzeichnisse erstellen und Berechtigungen setzen
 for dir in "$NGINX_CUSTOM" "$NGINX_SITES" "$NGINX_SITES_ENABLED" \
            "$NGINX_CONF" "$NGINX_CACHE" "$NGINX_SSL" "$NGINX_SNIPPETS" \
