@@ -1,3 +1,4 @@
+#!/bin/bash
 ##########################################################
 # CCC Commander Bootstrap Script
 # Inspiriert von WordOps (https://wordops.net)
@@ -10,7 +11,8 @@
 #   - Debian 11/12/13
 ##########################################################
 
-#!/bin/bash
+# Strict Mode
+set -euo pipefail
 # CCC Commander Bootstrap Script
 
 # Farbdefinitionen

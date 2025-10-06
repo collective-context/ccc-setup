@@ -1,9 +1,15 @@
 #!/bin/bash
-set -euo pipefail
 ##########################################################
 # NGINX Installation - CCC CODE Pattern
 # Basiert auf WordOps (https://wordops.net)
 ##########################################################
+
+# Strict Mode
+set -euo pipefail
+IFS=$'\n\t'
+
+# Abhängigkeiten prüfen
+REQUIRED_PACKAGES="curl wget git build-essential"
 
 source /etc/ccc.conf
 source /root/ccc/setup/functions.sh
@@ -291,9 +297,18 @@ NGINX_SITES_ENABLED="/etc/nginx/sites-enabled"
 NGINX_CONF="/etc/nginx/conf.d"
 NGINX_CACHE="/var/cache/nginx"
 
-# NGINX Installation
+# Abhängigkeiten installieren
+for pkg in $REQUIRED_PACKAGES; do
+    if ! command -v $pkg >/dev/null 2>&1; then
+        log_info "Installiere $pkg..."
+        apt-get install -y $pkg
+    fi
+done
+
+# NGINX Installation vereinfacht
+log_info "Installiere NGINX..."
 apt-get update
-install_package nginx nginx-module-geoip nginx-module-image-filter nginx-module-njs nginx-module-xslt
+DEBIAN_FRONTEND=noninteractive apt-get install -y nginx
 
 # NGINX Module kompilieren
 cd /usr/local/src
