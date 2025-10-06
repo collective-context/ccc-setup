@@ -65,32 +65,53 @@ install_package \
     rsync \
     cron
 
-# Erweiterte Firewall-Konfiguration
+# Erweiterte Firewall-Konfiguration mit Systemhärtung
 ufw --force disable  # Erstmal aus für Installation
 ufw default deny incoming
 ufw default allow outgoing
 
-# SSH mit Rate-Limiting
+# SSH Härtung
 ufw limit 22/tcp comment 'SSH with rate limiting'
+sed -i 's/#PermitRootLogin yes/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
+sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+systemctl restart ssh
 
-# Web-Dienste
-ufw allow 80/tcp comment 'HTTP'
-ufw allow 443/tcp comment 'HTTPS'
+# Web-Dienste mit Rate-Limiting
+ufw limit 80/tcp comment 'HTTP with rate limiting'
+ufw limit 443/tcp comment 'HTTPS with rate limiting'
 
-# Fail2ban Integration
+# Fail2ban erweiterte Integration
 ufw allow from 127.0.0.1 comment 'Allow Fail2ban'
 
-# Logging aktivieren
+# Erweiterte Logging-Konfiguration
 ufw logging on
+sed -i 's/LOGLEVEL=low/LOGLEVEL=medium/' /etc/ufw/ufw.conf
 
 # Zusätzliche Sicherheitsregeln
-ufw deny 23/tcp comment 'Block Telnet'
-ufw deny 3389/tcp comment 'Block RDP'
+for port in 21 23 25 110 143 445 3306 3389 5432 6379 27017; do
+    ufw deny $port/tcp comment "Block port $port"
+done
 
-# Fail2ban Konfiguration (CCC CODE)
+# Fail2ban Konfiguration mit erweiterten Regeln
 cat > /etc/fail2ban/jail.d/ccc.conf << 'F2B_EOF'
 [DEFAULT]
-bantime = 1h
+bantime = 24h
+findtime = 10m
+maxretry = 3
+
+[sshd]
+enabled = true
+port = ssh
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+bantime = 48h
+
+[nginx-http-auth]
+enabled = true
+filter = nginx-http-auth
+port = http,https
+logpath = /var/log/nginx/error.log
 findtime = 10m
 maxretry = 5
 
