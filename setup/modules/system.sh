@@ -65,13 +65,27 @@ install_package \
     rsync \
     cron
 
-# Firewall Basis
+# Erweiterte Firewall-Konfiguration
 ufw --force disable  # Erstmal aus für Installation
 ufw default deny incoming
 ufw default allow outgoing
-ufw allow 22/tcp    # SSH
-ufw allow 80/tcp    # HTTP
-ufw allow 443/tcp   # HTTPS
+
+# SSH mit Rate-Limiting
+ufw limit 22/tcp comment 'SSH with rate limiting'
+
+# Web-Dienste
+ufw allow 80/tcp comment 'HTTP'
+ufw allow 443/tcp comment 'HTTPS'
+
+# Fail2ban Integration
+ufw allow from 127.0.0.1 comment 'Allow Fail2ban'
+
+# Logging aktivieren
+ufw logging on
+
+# Zusätzliche Sicherheitsregeln
+ufw deny 23/tcp comment 'Block Telnet'
+ufw deny 3389/tcp comment 'Block RDP'
 
 # Fail2ban Konfiguration (CCC CODE)
 cat > /etc/fail2ban/jail.d/ccc.conf << 'F2B_EOF'
