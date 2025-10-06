@@ -189,12 +189,33 @@ log_error() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1" >> "/var/log/ccc-errors.log"
 }
 
-# Neue Sicherheitsfunktionen
+# Erweiterte Sicherheitsfunktionen
 check_root() {
     if [ "$(id -u)" != "0" ]; then
         log_error "Dieses Script muss als root ausgeführt werden"
         exit 1
     fi
+    
+    # Zusätzliche Sicherheitsprüfungen
+    if [ -n "$SUDO_USER" ]; then
+        log_warning "Script wurde mit sudo ausgeführt - prüfe Berechtigungen"
+        if ! groups "$SUDO_USER" | grep -qw sudo; then
+            log_error "Benutzer $SUDO_USER ist nicht in der sudo Gruppe"
+            exit 1
+        fi
+    fi
+    
+    # Prüfe ob wichtige Verzeichnisse existieren und sicher sind
+    for dir in /root /etc /var/log; do
+        if [ ! -d "$dir" ]; then
+            log_error "Kritisches Verzeichnis fehlt: $dir"
+            exit 1
+        fi
+        perms=$(stat -c "%a" "$dir")
+        if [ "$perms" != "700" ] && [ "$perms" != "755" ]; then
+            log_warning "Unsichere Berechtigungen auf: $dir ($perms)"
+        fi
+    done
 }
 
 secure_directory() {
