@@ -12,15 +12,21 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Sicherheits-Konfiguration
+# Erweiterte Sicherheits-Konfiguration
 readonly LOG_FILE="/var/log/ccc-setup.log"
 readonly ERROR_LOG="/var/log/ccc-errors.log"
 readonly AUDIT_LOG="/var/log/ccc-audit.log"
+readonly SECURITY_LOG="/var/log/ccc-security.log"
 readonly MAX_RETRIES=3
 readonly SECURE_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 readonly SECURE_UMASK=0027
 readonly SECURE_FILE_MODE=0640
 readonly SECURE_DIR_MODE=0750
+
+# Sicherheits-Checks
+readonly MIN_PASSWORD_LENGTH=12
+readonly REQUIRED_PACKAGES="ufw fail2ban apparmor"
+readonly BLOCKED_PORTS="21,23,25,110,143"
 
 # Sichere Umgebung erzwingen
 umask $SECURE_UMASK
