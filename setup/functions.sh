@@ -50,7 +50,7 @@ IFS=$'\n\t'
 # Trap für Fehlerbehandlung
 trap 'error_handler $? $LINENO $BASH_LINENO "$BASH_COMMAND" $(printf "::%s" ${FUNCNAME[@]:-})' ERR
 
-# Erweiterte Fehlerbehandlung mit Backup, Wiederherstellung und Sicherheitsprotokollierung
+# Erweiterte Fehlerbehandlung mit Backup, Wiederherstellung, Sicherheitsprotokollierung und Incident Response
 error_handler() {
     local exit_code=$1
     local line_no=$2
@@ -58,6 +58,8 @@ error_handler() {
     local last_command=$4
     local func_trace=$5
     local script_name=$(basename "${BASH_SOURCE[1]}")
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local incident_id=$(openssl rand -hex 8)
     
     # Detaillierte Fehlerinformationen
     echo -e "${RED}[FATAL ERROR]${NC} in ${BASH_SOURCE[1]}:$line_no" >&2
