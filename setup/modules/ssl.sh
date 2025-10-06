@@ -1,7 +1,6 @@
 #!/bin/bash
 ##########################################################
-# SSL Installation - CCC CODE Pattern Let's Encrypt SSL
-# setup/modules/ssl.sh
+# SSL Installation - CCC CODE Pattern
 ##########################################################
 
 source /etc/ccc.conf

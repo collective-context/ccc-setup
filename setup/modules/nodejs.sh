@@ -1,7 +1,6 @@
 #!/bin/bash
 ##########################################################
-# Node.js Installation - Idempotent # Für Ghost CMS
-# setup/modules/nodejs.sh
+# Node.js Installation - CCC CODE Pattern
 ##########################################################
 
 source /root/ccc/setup/functions.sh

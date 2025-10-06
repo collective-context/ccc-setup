@@ -1,7 +1,6 @@
 #!/bin/bash
 ##########################################################
-# System Basis-Konfiguration # CCC CODE Pattern
-# setup/modules/system.sh
+# System Basis Konfiguration - CCC CODE Pattern
 ##########################################################
 
 source /etc/ccc.conf

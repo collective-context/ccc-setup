@@ -1,8 +1,6 @@
 #!/bin/bash
 ##########################################################
-# BookStack Installation - Strict CCC CODE Pattern
-# ALLE Daten in $STORAGE_ROOT/www/bookstack
-# setup/modules/bookstack.sh
+# BookStack Installation - CCC CODE Pattern
 ##########################################################
 
 source /etc/ccc.conf

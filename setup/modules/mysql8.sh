@@ -1,8 +1,6 @@
 #!/bin/bash
 ##########################################################
-# MySQL 8 Installation - Strict CCC CODE Pattern
-# OPTIMIERT für Ubuntu 24.04 - Mit Passwort-Validation
-# setup/modules/mysql8.sh
+# MySQL 8 Installation - CCC CODE Pattern
 ##########################################################
 
 source /etc/ccc.conf

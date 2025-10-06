@@ -1,8 +1,6 @@
 #!/bin/bash
 ##########################################################
-# NGINX Installation - Strict CCC CODE Pattern
-# Konfigurationen aus $STORAGE_ROOT/nginx laden
-# setup/modules/nginx.sh
+# NGINX Installation - CCC CODE Pattern
 ##########################################################
 
 source /etc/ccc.conf

@@ -1,8 +1,6 @@
 #!/bin/bash
 ##########################################################
-# Ghost CMS Installation - Strict CCC CODE Pattern
-# ALLE Daten in $STORAGE_ROOT/www/ghost
-# setup/modules/ghost.sh
+# Ghost CMS Installation - CCC CODE Pattern
 ##########################################################
 
 source /etc/ccc.conf
