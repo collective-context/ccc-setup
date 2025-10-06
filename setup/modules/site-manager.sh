@@ -29,6 +29,46 @@ site_create() {
     local wp_title="WordPress Site"
     local wp_password=$(openssl rand -base64 12)
     
+    # CLI Wrapper für einfachere Verwendung
+    cat > /usr/local/bin/ccc-site << 'SITEWRAPPER'
+#!/bin/bash
+source /etc/ccc.conf
+
+# Hilfe anzeigen
+show_help() {
+    echo "Verwendung: ccc-site COMMAND [OPTIONS]"
+    echo ""
+    echo "Commands:"
+    echo "  create DOMAIN   Neue Site erstellen"
+    echo "  delete DOMAIN   Site löschen"
+    echo "  edit DOMAIN     Site bearbeiten"
+    echo "  list           Alle Sites auflisten"
+    echo ""
+    echo "Options:"
+    echo "  --wp           WordPress Site"
+    echo "  --php VERSION  PHP Version (7.4-8.3)"
+    echo "  --ssl         SSL aktivieren"
+    echo "  --cache TYPE  Cache (wpfc|wpredis|wpsc)"
+    echo ""
+    echo "Beispiele:"
+    echo "  ccc-site create example.com --wp --php83"
+    echo "  ccc-site edit example.com --php74"
+}
+
+case "$1" in
+    create|delete|edit|list)
+        source /root/ccc/setup/modules/site-manager.sh
+        site_${1} "${@:2}"
+        ;;
+    *)
+        show_help
+        exit 1
+        ;;
+esac
+SITEWRAPPER
+
+    chmod +x /usr/local/bin/ccc-site
+    
     # WordPress CLI installieren falls nicht vorhanden
     if [[ "$site_type" == "wordpress"* ]] && ! command -v wp &> /dev/null; then
         log_info "Installiere WP-CLI..."
