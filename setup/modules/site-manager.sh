@@ -17,8 +17,21 @@ NGINX_SNIPPETS="/etc/nginx/snippets"
 NGINX_CACHE_FASTCGI="/var/cache/nginx/fastcgi"
 NGINX_CACHE_PROXY="/var/cache/nginx/proxy"
 
-# PHP Versionen
+# PHP Multi-Version Support
 PHP_VERSIONS=("7.4" "8.0" "8.1" "8.2" "8.3")
+PHP_FPM_POOLS="/etc/php/%s/fpm/pool.d"
+PHP_DEFAULT_VERSION="8.3"
+
+# PHP-FPM Konfigurationen pro Version
+for version in "${PHP_VERSIONS[@]}"; do
+    if [ ! -d "/etc/php/$version" ]; then
+        log_info "Installiere PHP $version..."
+        add-apt-repository -y ppa:ondrej/php
+        install_package "php$version-fpm" "php$version-common" "php$version-mysql" \
+            "php$version-xml" "php$version-curl" "php$version-gd" "php$version-zip" \
+            "php$version-mbstring" "php$version-cli" "php$version-opcache"
+    fi
+done
 PHP_VERSIONS=("7.4" "8.0" "8.1" "8.2" "8.3")
 
 # Verzeichnisse erstellen
