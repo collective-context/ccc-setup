@@ -29,6 +29,68 @@ site_create() {
     local wp_title="WordPress Site"
     local wp_password=$(openssl rand -base64 12)
 
+    # WordOps-Style CLI Interface
+    case "$1" in
+        create)
+            site_create "${@:2}"
+            ;;
+        edit)
+            site_edit "${@:2}"
+            ;;
+        delete)
+            site_delete "${@:2}"
+            ;;
+        list)
+            site_list
+            ;;
+        *)
+            show_usage
+            ;;
+    esac
+}
+
+# WordOps-Style Site Edit Funktion
+site_edit() {
+    local domain=$1
+    shift
+
+    # Parameter validieren
+    if [ ! -f "$SITES_AVAILABLE/$domain" ]; then
+        log_error "Site $domain existiert nicht"
+        return 1
+    fi
+
+    # PHP Version wechseln
+    if [[ "$1" =~ ^--php[0-9]{2}$ ]]; then
+        local new_version="${1#--php}"
+        switch_php_version "$domain" "$new_version"
+    fi
+}
+
+# PHP Version wechseln (WordOps-Style)
+switch_php_version() {
+    local domain=$1
+    local new_version=$2
+
+    # Prüfen ob PHP Version verfügbar
+    if [ ! -d "/etc/php/$new_version" ]; then
+        log_info "Installiere PHP $new_version..."
+        add-apt-repository -y ppa:ondrej/php
+        install_package "php$new_version-fpm" "php$new_version-common" "php$new_version-mysql" \
+            "php$new_version-xml" "php$new_version-curl" "php$new_version-gd" "php$new_version-zip" \
+            "php$new_version-mbstring" "php$new_version-cli" "php$new_version-opcache"
+    fi
+
+    # NGINX Konfiguration anpassen
+    sed -i "s/php[0-9]\.[0-9]-fpm.sock/php$new_version-fpm.sock/" "$SITES_AVAILABLE/$domain"
+    
+    # Services neustarten
+    systemctl restart "php$new_version-fpm"
+    systemctl reload nginx
+
+    log_success "PHP Version für $domain auf $new_version aktualisiert"
+}
+
     # WordOps-Style Kommandos
     case "$1" in
         --html)
