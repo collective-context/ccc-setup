@@ -13,10 +13,21 @@
 
 # Strict Mode
 set -euo pipefail
-# CCC Commander Bootstrap Script
 
 # Standardwerte setzen
 TEST_MODE=${TEST_MODE:-false}
+
+# Prüfe Root-Rechte
+if [ "$(id -u)" != "0" ]; then
+    echo "Dieses Script muss als root ausgeführt werden!"
+    exit 1
+fi
+
+# Git installieren falls nicht vorhanden
+if ! command -v git >/dev/null 2>&1; then
+    apt-get update
+    apt-get install -y git
+fi
 
 # Farbdefinitionen
 GREEN='\033[0;32m'
@@ -57,15 +68,28 @@ echo -e "${NC}"
 
 # CCC Repository herunterladen oder aktualisieren
 if [ ! -d "/root/ccc" ]; then
-    log_info "Lade CCC Commander herunter..."
-    git clone https://github.com/collective-context/ccc-setup.git /root/ccc
-    if [ $? -ne 0 ]; then
-        log_error "Download fehlgeschlagen"
+    echo -e "${BLUE}[INFO]${NC} Lade CCC Commander herunter..."
+    # Verzeichnis erstellen falls es nicht existiert
+    mkdir -p /root/ccc
+    
+    # Repository klonen
+    if git clone https://github.com/collective-context/ccc-setup.git /root/ccc; then
+        echo -e "${GREEN}[OK]${NC} Download erfolgreich"
+        # Ausführbare Rechte setzen
+        chmod 700 /root/ccc/setup.sh
+        chmod 700 /root/ccc/setup/*.sh
+        chmod 700 /root/ccc/setup/modules/*.sh
+    else
+        echo -e "${RED}[ERROR]${NC} Download fehlgeschlagen"
         exit 1
     fi
 else
-    log_info "CCC Repository existiert bereits - aktualisiere..."
+    echo -e "${BLUE}[INFO]${NC} CCC Repository existiert bereits - aktualisiere..."
     cd /root/ccc && git pull origin main
+    # Ausführbare Rechte erneuern
+    chmod 700 /root/ccc/setup.sh
+    chmod 700 /root/ccc/setup/*.sh
+    chmod 700 /root/ccc/setup/modules/*.sh
 fi
 
 # Setup-Verzeichnis prüfen
