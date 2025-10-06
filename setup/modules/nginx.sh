@@ -50,13 +50,13 @@ NGINX_BUILD_OPTIONS="
 prepare_nginx() {
     log_info "Bereite NGINX Installation vor..."
     
-    # WordOps Repository
-    curl -sL https://mirrors.wordops.net/gpg.key | apt-key add -
-    echo "deb https://mirrors.wordops.net/debian $(lsb_release -cs) main" > /etc/apt/sources.list.d/wordops.list
+    # WordOps Repository mit signiertem Key
+    curl -fsSL https://mirrors.wordops.net/gpg.key | gpg --dearmor | tee /usr/share/keyrings/wordops-archive-keyring.gpg >/dev/null
+    echo "deb [signed-by=/usr/share/keyrings/wordops-archive-keyring.gpg] https://mirrors.wordops.net/debian $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/wordops.list
     
-    # NGINX Repository
-    curl -sL https://nginx.org/keys/nginx_signing.key | apt-key add -
-    echo "deb https://nginx.org/packages/mainline/$(lsb_release -is | tr '[:upper:]' '[:lower:]') $(lsb_release -cs) nginx" > /etc/apt/sources.list.d/nginx.list
+    # NGINX Repository mit signiertem Key
+    curl -fsSL https://nginx.org/keys/nginx_signing.key | gpg --dearmor | tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
+    echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/mainline/$(lsb_release -is | tr '[:upper:]' '[:lower:]') $(lsb_release -cs) nginx" | tee /etc/apt/sources.list.d/nginx.list
 
     # Verzeichnisse erstellen
     for dir in "${!NGINX_DIRS[@]}"; do
@@ -138,8 +138,20 @@ install_nginx() {
     apt-get update
     install_package nginx-custom nginx-extras
 
-    # WordOps Konfigurationen
-    cp -r /usr/share/wordops/nginx/* /etc/nginx/
+    # WordOps Konfigurationen mit erweiterten Sicherheitseinstellungen
+    cp -r /usr/share/wordops/nginx/conf.d/* /etc/nginx/conf.d/
+    cp -r /usr/share/wordops/nginx/sites-available/* /etc/nginx/sites-available/
+    cp -r /usr/share/wordops/nginx/snippets/* /etc/nginx/snippets/
+    
+    # WordOps-Sicherheitsheader
+    cat > /etc/nginx/snippets/security-headers.conf << 'EOF'
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header X-XSS-Protection "1; mode=block" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "no-referrer-when-downgrade" always;
+add_header Content-Security-Policy "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'" always;
+add_header Permissions-Policy "geolocation=(), midi=(), sync-xhr=(), microphone=(), camera=(), magnetometer=(), gyroscope=(), fullscreen=(self), payment=()" always;
+EOF
 
     # NGINX testen
     if nginx -t && curl -I http://localhost >/dev/null 2>&1; then
@@ -241,17 +253,20 @@ install_package nginx-custom nginx-extras
 cp -r /usr/share/wordops/nginx/* /etc/nginx/
 fi
 
-# NGINX Verzeichnisstruktur
+# WordOps-Style Verzeichnisstruktur
 declare -A NGINX_DIRS=(
-    [custom]="/etc/nginx/custom"
     [sites]="/etc/nginx/sites-available"
     [enabled]="/etc/nginx/sites-enabled"
     [conf]="/etc/nginx/conf.d"
+    [custom]="/etc/nginx/custom"
     [cache]="/var/cache/nginx"
     [ssl]="/etc/nginx/ssl"
     [snippets]="/etc/nginx/snippets"
+    [vhosts]="/etc/nginx/vhosts.d"
     [cache_fastcgi]="/var/cache/nginx/fastcgi"
     [cache_proxy]="/var/cache/nginx/proxy"
+    [acme]="/var/www/acme"
+    [log]="/var/log/nginx"
 )
 
 # Verzeichnisse erstellen
