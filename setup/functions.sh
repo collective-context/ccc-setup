@@ -215,6 +215,11 @@ log_error() {
     [ "$TEST_MODE" = "true" ] && echo "[TEST-ERROR] $1" >> "$LOG_FILE"
 }
 
+# Log-Verzeichnis erstellen
+mkdir -p /var/log/ccc
+chown root:adm /var/log/ccc
+chmod 750 /var/log/ccc
+
 # Erweiterte Sicherheitsfunktionen mit umfassender Validierung
 check_root() {
     # Prüfe effektive UID
