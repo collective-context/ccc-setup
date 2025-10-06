@@ -14,31 +14,68 @@ PHP_VERSIONS=("7.4" "8.0" "8.1" "8.2" "8.3")
 # Verzeichnisse erstellen
 mkdir -p "$SITES_AVAILABLE" "$SITES_ENABLED" "$NGINX_CUSTOM"
 
-# Site Management Funktionen
+# Site Management Funktionen (WordOps-Style)
 site_create() {
     local domain=$1
     shift
     local php_version="8.3"
     local use_ssl=0
     local cache_type=""
+    local site_type=""
     
-    # Parameter parsen
+    # Parameter parsen (WordOps-Style)
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --php)
-                php_version="$2"
-                shift 2
+            --php*)
+                php_version="${1#--php}"
+                shift
                 ;;
-            --ssl)
+            --ssl|--le)
                 use_ssl=1
                 shift
                 ;;
+            --wp)
+                site_type="wordpress"
+                shift
+                ;;
+            --wpsubdir)
+                site_type="wordpress-subdir"
+                shift
+                ;;
+            --wpsubdomain)
+                site_type="wordpress-subdomain"
+                shift
+                ;;
             --wpfc)
+                site_type="wordpress"
                 cache_type="fastcgi"
                 shift
                 ;;
             --wpredis)
+                site_type="wordpress"
                 cache_type="redis"
+                shift
+                ;;
+            --wpsc)
+                site_type="wordpress"
+                cache_type="supercache"
+                shift
+                ;;
+            --html)
+                site_type="html"
+                shift
+                ;;
+            --php)
+                site_type="php"
+                shift
+                ;;
+            --mysql)
+                site_type="mysql"
+                shift
+                ;;
+            --proxy=*)
+                site_type="proxy"
+                proxy_url="${1#*=}"
                 shift
                 ;;
             *)
