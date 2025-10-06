@@ -29,6 +29,28 @@ site_create() {
     local wp_title="WordPress Site"
     local wp_password=$(openssl rand -base64 12)
     
+    # WordOps-Style Site Management
+    log_info "Erstelle neue Site: $domain"
+    
+    # Verzeichnisstruktur nach WordOps
+    local site_root="/var/www/$domain"
+    local site_logs="/var/log/nginx/$domain"
+    local site_cache="/var/cache/nginx/proxy_cache/$domain"
+    
+    mkdir -p "$site_root" "$site_logs" "$site_cache"
+    chown -R www-data:www-data "$site_root" "$site_logs" "$site_cache"
+    
+    # PHP-FPM Pool nach WordOps-Style
+    create_php_pool "$domain" "$php_version"
+    
+    # NGINX Config nach WordOps
+    create_nginx_config "$domain" "$site_type" "$cache_type"
+    
+    # SSL Setup wenn gewünscht
+    if [ "$use_ssl" = 1 ]; then
+        setup_ssl "$domain"
+    fi
+    
     # WordPress CLI Wrapper erstellen
     cat > /usr/local/bin/ccc-wp << 'WPSCRIPT'
 #!/bin/bash
