@@ -17,11 +17,22 @@ readonly LOG_FILE="/var/log/ccc-setup.log"
 readonly ERROR_LOG="/var/log/ccc-errors.log"
 readonly AUDIT_LOG="/var/log/ccc-audit.log"
 readonly SECURITY_LOG="/var/log/ccc-security.log"
+readonly INCIDENT_LOG="/var/log/ccc-incident.log"
 readonly MAX_RETRIES=3
 readonly SECURE_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 readonly SECURE_UMASK=0027
 readonly SECURE_FILE_MODE=0640
 readonly SECURE_DIR_MODE=0750
+readonly BACKUP_RETENTION=7
+readonly CRITICAL_SERVICES="nginx mysql php-fpm"
+readonly MONITORING_INTERVAL=300
+
+# Sicherheits-Limits
+readonly MAX_LOGIN_ATTEMPTS=5
+readonly PASSWORD_MIN_LENGTH=12
+readonly SESSION_TIMEOUT=3600
+readonly ALLOWED_HOSTS="localhost,127.0.0.1"
+readonly BLOCKED_IPS="/etc/ccc/blocked_ips.txt"
 
 # Sicherheits-Checks
 readonly MIN_PASSWORD_LENGTH=12
