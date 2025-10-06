@@ -106,12 +106,20 @@ if [ -t 0 ]; then
     # Interaktiver Modus (Terminal vorhanden)
     log_info "Starte interaktive Installation..."
     cd /root/ccc/setup || exit 1
-    if [ -x "./start.sh" ]; then
-        ./start.sh
-    else
-        log_error "start.sh ist nicht ausführbar"
+    
+    # Prüfe ob start.sh existiert und ausführbar ist
+    if [ ! -f "./start.sh" ]; then
+        log_error "start.sh nicht gefunden"
         exit 1
     fi
+    
+    if [ ! -x "./start.sh" ]; then
+        log_error "start.sh ist nicht ausführbar"
+        chmod 700 ./start.sh
+    fi
+    
+    # Führe start.sh direkt aus
+    ./start.sh
 else
     # Pipeline-Modus (curl | bash) - nicht-interaktiv mit Standardwerten
     log_info "Pipeline-Modus erkannt - verwende Standardkonfiguration..."
@@ -128,8 +136,22 @@ else
     log_info "  Modus: $INSTALL_MODE"
     log_info "  Komponenten: $INSTALL_COMPONENTS"
     
-    # Im nicht-interaktiven Modus starten
+    # Wechsle ins Setup-Verzeichnis
     cd /root/ccc/setup || exit 1
+    
+    # Prüfe ob start.sh existiert und ausführbar ist
+    if [ ! -f "./start.sh" ]; then
+        log_error "start.sh nicht gefunden"
+        exit 1
+    fi
+    
+    if [ ! -x "./start.sh" ]; then
+        log_error "start.sh ist nicht ausführbar"
+        chmod 700 ./start.sh
+    fi
+    
+    # Führe start.sh im nicht-interaktiven Modus aus
+    ./start.sh --non-interactive
     if [ -x "./start.sh" ]; then
         ./start.sh --non-interactive
     else
