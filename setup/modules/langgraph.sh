@@ -18,13 +18,8 @@ LANGGRAPH_AGENTS_DIR="$STORAGE_ROOT/tools/langgraph/agents"
 mkdir -p "$LANGGRAPH_DIR" "$LANGGRAPH_CONFIG" "$LANGGRAPH_AGENTS_DIR"
 chown -R "$STORAGE_USER:$STORAGE_USER" "$LANGGRAPH_DIR" "$LANGGRAPH_CONFIG" "$LANGGRAPH_AGENTS_DIR"
 
-# Python Virtual Environment für LangGraph erstellen
-if [ ! -f "$LANGGRAPH_DIR/bin/activate" ]; then
-    log_info "Erstelle Python Virtual Environment für LangGraph..."
-    sudo -u "$STORAGE_USER" python3 -m venv "$LANGGRAPH_DIR"
-else
-    log_info "LangGraph Virtual Environment existiert bereits"
-fi
+# Python Virtual Environment für LangGraph erstellen (idempotent)
+[ ! -f "$LANGGRAPH_DIR/bin/activate" ] && sudo -u "$STORAGE_USER" python3 -m venv "$LANGGRAPH_DIR"
 
 # LangGraph Packages installieren/updaten
 log_info "Installiere LangGraph Packages..."

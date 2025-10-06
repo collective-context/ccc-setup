@@ -26,14 +26,8 @@ if [ ! -f /etc/apt/sources.list.d/nodesource.list ]; then
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 fi
 
-# Node.js installieren
-if ! command -v node &> /dev/null; then
-    log_info "Installiere Node.js..."
-    apt-get install -y -qq nodejs
-else
-    log_info "Node.js aktualisieren..."
-    apt-get install -y -qq nodejs
-fi
+# Node.js installieren/updaten mit idempotenter Funktion
+install_package nodejs
 
 # PM2 für Process Management installieren
 if ! command -v pm2 &> /dev/null; then

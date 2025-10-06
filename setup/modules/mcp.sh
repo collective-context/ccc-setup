@@ -18,18 +18,8 @@ MCP_SERVERS_DIR="$STORAGE_ROOT/tools/mcp/servers"
 mkdir -p "$MCP_DIR" "$MCP_CONFIG" "$MCP_SERVERS_DIR"
 chown -R "$STORAGE_USER:$STORAGE_USER" "$MCP_DIR" "$MCP_CONFIG" "$MCP_SERVERS_DIR"
 
-# Systemweite Voraussetzungen
-log_info "Installiere MCP Voraussetzungen..."
-apt-get update -qq
-apt-get install -y -qq \
-    python3 \
-    python3-pip \
-    python3-venv \
-    git \
-    curl \
-    wget \
-    nodejs \
-    npm
+# Systemweite Voraussetzungen mit idempotenter Funktion
+install_package python3 python3-pip python3-venv git curl wget nodejs npm
 
 # Python Virtual Environment für MCP erstellen
 if [ ! -f "$MCP_DIR/bin/activate" ]; then

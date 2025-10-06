@@ -55,7 +55,10 @@ else
 cd "$GHOST_DIR"
 
 # Idempotente Ghost-Installation
-[ -d "versions" ] && ghost update --force || ghost install \
+if [ -d "versions" ]; then
+    ghost update --force
+else
+    ghost install \
   --db mysql \
   --dbhost localhost \
   --dbuser "$DB_USER" \

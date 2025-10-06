@@ -23,15 +23,10 @@ mysql --user=root --password="$DB_ROOT_PASS" <<-EOSQL
     FLUSH PRIVILEGES;
 EOSQL
 
-# PHP 8.3 Installation (idempotent)
-if ! command -v php8.3 &> /dev/null; then
-    log_info "Installiere PHP 8.3..."
-    add-apt-repository -y ppa:ondrej/php
-    apt-get update -qq
-    apt-get install -y -qq \
-        php8.3 php8.3-fpm php8.3-curl php8.3-mbstring php8.3-ldap \
-        php8.3-xml php8.3-zip php8.3-gd php8.3-mysql php8.3-tokenizer php8.3-bcmath
-fi
+# PHP 8.3 Installation mit idempotenter Funktion
+add-apt-repository -y ppa:ondrej/php
+install_package php8.3 php8.3-fpm php8.3-curl php8.3-mbstring php8.3-ldap \
+    php8.3-xml php8.3-zip php8.3-gd php8.3-mysql php8.3-tokenizer php8.3-bcmath
 
 # PHP-FPM Pool für BookStack (als Storage User)
 mkdir -p /etc/php/8.3/fpm/pool.d/

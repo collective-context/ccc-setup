@@ -18,16 +18,8 @@ mkdir -p "$AIDER_DIR"
 mkdir -p "$AIDER_CONFIG"
 chown -R "$STORAGE_USER:$STORAGE_USER" "$AIDER_DIR" "$AIDER_CONFIG"
 
-# Systemweite Voraussetzungen
-log_info "Installiere Python und Pip..."
-apt-get update -qq
-apt-get install -y -qq \
-    python3 \
-    python3-pip \
-    python3-venv \
-    git \
-    curl \
-    wget
+# Systemweite Voraussetzungen mit idempotenter Funktion
+install_package python3 python3-pip python3-venv git curl wget
 
 # Python Virtual Environment für Aider erstellen (idempotent)
 if [ ! -f "$AIDER_DIR/bin/activate" ]; then

@@ -18,13 +18,8 @@ FASTMCP_SERVERS_DIR="$STORAGE_ROOT/tools/fastmcp/servers"
 mkdir -p "$FASTMCP_DIR" "$FASTMCP_CONFIG" "$FASTMCP_SERVERS_DIR"
 chown -R "$STORAGE_USER:$STORAGE_USER" "$FASTMCP_DIR" "$FASTMCP_CONFIG" "$FASTMCP_SERVERS_DIR"
 
-# Python Virtual Environment für FastMCP erstellen
-if [ ! -f "$FASTMCP_DIR/bin/activate" ]; then
-    log_info "Erstelle Python Virtual Environment für FastMCP..."
-    sudo -u "$STORAGE_USER" python3 -m venv "$FASTMCP_DIR"
-else
-    log_info "FastMCP Virtual Environment existiert bereits"
-fi
+# Python Virtual Environment für FastMCP erstellen (idempotent)
+[ ! -f "$FASTMCP_DIR/bin/activate" ] && sudo -u "$STORAGE_USER" python3 -m venv "$FASTMCP_DIR"
 
 # FastMCP Packages installieren/updaten
 log_info "Installiere FastMCP Packages..."

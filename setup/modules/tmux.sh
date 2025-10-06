@@ -18,18 +18,8 @@ mkdir -p "$TMUX_CONFIG_DIR"
 mkdir -p "$TMUX_PLUGINS_DIR"
 chown -R "$STORAGE_USER:$STORAGE_USER" "$TMUX_CONFIG_DIR" "$TMUX_PLUGINS_DIR"
 
-# TMUX installieren
-if ! command -v tmux &> /dev/null; then
-    log_info "Installiere TMUX..."
-    apt-get update -qq
-    apt-get install -y -qq \
-        tmux \
-        git \
-        curl \
-        wget
-else
-    log_info "TMUX ist bereits installiert"
-fi
+# TMUX installieren mit idempotenter Funktion
+install_package tmux git curl wget
 
 # TMUX Konfiguration erstellen
 cat > "$TMUX_CONFIG_DIR/tmux.conf" << TMUXCONF

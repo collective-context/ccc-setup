@@ -18,13 +18,8 @@ LIBTMUX_SCRIPTS_DIR="$STORAGE_ROOT/tools/libtmux/scripts"
 mkdir -p "$LIBTMUX_DIR" "$LIBTMUX_CONFIG" "$LIBTMUX_SCRIPTS_DIR"
 chown -R "$STORAGE_USER:$STORAGE_USER" "$LIBTMUX_DIR" "$LIBTMUX_CONFIG" "$LIBTMUX_SCRIPTS_DIR"
 
-# Python Virtual Environment für libtmux erstellen
-if [ ! -f "$LIBTMUX_DIR/bin/activate" ]; then
-    log_info "Erstelle Python Virtual Environment für libtmux..."
-    sudo -u "$STORAGE_USER" python3 -m venv "$LIBTMUX_DIR"
-else
-    log_info "libtmux Virtual Environment existiert bereits"
-fi
+# Python Virtual Environment für libtmux erstellen (idempotent)
+[ ! -f "$LIBTMUX_DIR/bin/activate" ] && sudo -u "$STORAGE_USER" python3 -m venv "$LIBTMUX_DIR"
 
 # libtmux Packages installieren/updaten
 log_info "Installiere libtmux Packages..."

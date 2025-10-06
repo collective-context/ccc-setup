@@ -9,11 +9,8 @@ source /root/ccc/setup/functions.sh
 
 echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
 
-# NGINX installieren falls nicht vorhanden
-if ! command -v nginx &> /dev/null; then
-    log_info "Installiere NGINX..."
-    apt-get install -y -qq nginx
-fi
+# NGINX installieren mit idempotenter Funktion
+install_package nginx
 
 # NGINX Service sicherstellen
 systemctl enable nginx
