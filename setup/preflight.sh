@@ -1,11 +1,70 @@
 #!/bin/bash
 set -euo pipefail
 ##########################################################
-# Preflight Checks - Systemvoraussetzungen prüfen
+# Preflight Checks - Systemvoraussetzungen und Sicherheit prüfen
 # setup/preflight.sh
 ##########################################################
 
 source /root/ccc/setup/functions.sh
+
+# Sicherheits-Checks aktivieren
+set -euo pipefail
+IFS=$'\n\t'
+
+# Sicherheits-Audit durchführen
+security_audit() {
+    local issues=0
+    
+    # Root-Check
+    if [ "$(id -u)" != "0" ]; then
+        log_error "Script muss als root ausgeführt werden"
+        exit 1
+    fi
+    
+    # Systemintegrität prüfen
+    for file in /etc/passwd /etc/shadow /etc/group; do
+        if [ ! -f "$file" ] || [ ! -r "$file" ]; then
+            log_error "Kritische Systemdatei nicht verfügbar: $file"
+            ((issues++))
+        fi
+    done
+    
+    # Berechtigungen prüfen
+    for dir in /etc /root /var/log; do
+        perms=$(stat -c "%a" "$dir")
+        if [ "$perms" != "755" ] && [ "$perms" != "750" ] && [ "$perms" != "700" ]; then
+            log_warning "Unsichere Berechtigungen: $dir ($perms)"
+            ((issues++))
+        fi
+    done
+    
+    # Offene Ports prüfen
+    local open_ports=$(netstat -tuln | grep LISTEN | awk '{print $4}' | cut -d: -f2)
+    for port in $open_ports; do
+        if [[ ! "$port" =~ ^(22|80|443)$ ]]; then
+            log_warning "Unerwarteter offener Port: $port"
+            ((issues++))
+        fi
+    done
+    
+    # SELinux/AppArmor Status
+    if command -v getenforce >/dev/null 2>&1; then
+        if [ "$(getenforce)" != "Enforcing" ]; then
+            log_warning "SELinux ist nicht im Enforcing Modus"
+            ((issues++))
+        fi
+    elif command -v aa-status >/dev/null 2>&1; then
+        if ! aa-status --enabled 2>/dev/null; then
+            log_warning "AppArmor ist nicht aktiv"
+            ((issues++))
+        fi
+    else
+        log_warning "Kein MAC (SELinux/AppArmor) System gefunden"
+        ((issues++))
+    fi
+    
+    return $issues
+}
 
 echo -e "${BLUE}[PREFLIGHT]${NC} System-Checks..."
 
