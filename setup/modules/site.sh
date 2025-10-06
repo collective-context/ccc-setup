@@ -20,15 +20,26 @@ mkdir -p "$SITES_AVAILABLE" "$SITES_ENABLED" "$NGINX_CUSTOM"
 
 # Site Management Funktionen
 site_create() {
-    local domain=$1
-    shift
-    local options=$@
-
-    # Domain validieren
-    if [[ ! "$domain" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-        log_error "Ungültige Domain: $domain"
+    if [ "$#" -lt 1 ]; then
+        log_error "Verwendung: site_create <domain> [options]"
         return 1
     }
+
+    local domain="$1"
+    shift
+    local options="$*"
+
+    # Domain validieren
+    if [[ ! "$domain" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$ ]]; then
+        log_error "Ungültige Domain: $domain"
+        return 1
+    fi
+
+    # Prüfen ob Domain bereits existiert
+    if [ -f "$SITES_AVAILABLE/$domain" ]; then
+        log_error "Site $domain existiert bereits"
+        return 1
+    fi
 
     # Basis Nginx Konfiguration
     cat > "$SITES_AVAILABLE/$domain" << NGINX_CONF
