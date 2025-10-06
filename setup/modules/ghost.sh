@@ -9,10 +9,21 @@ source /root/ccc/setup/functions.sh
 
 echo -e "${BLUE}[MODULE]${NC} Ghost CMS Installation (CCC CODE Style)..."
 
-# Ghost Installation Directory in Storage Root
+# Ghost Installation Directory in Storage Root mit erweiterten Sicherheitseinstellungen
 GHOST_DIR="$STORAGE_ROOT/www/ghost"
 GHOST_USER="$STORAGE_USER"
 GHOST_GROUP="$STORAGE_USER"
+
+# Sicherheitseinstellungen
+GHOST_CONTENT_DIR="$GHOST_DIR/content"
+GHOST_THEMES_DIR="$GHOST_DIR/content/themes"
+GHOST_IMAGES_DIR="$GHOST_DIR/content/images"
+GHOST_APPS_DIR="$GHOST_DIR/content/apps"
+
+# Sichere Berechtigungen
+GHOST_DIR_MODE=750
+GHOST_FILE_MODE=640
+GHOST_CONTENT_MODE=770
 
 # Ghost User ist unser Storage User (CCC CODE Pattern!)
 if ! id -u "$GHOST_USER" &>/dev/null; then
