@@ -1,9 +1,15 @@
 #!/bin/bash
 # NGINX Installationstest
 
-source /etc/ccc.conf
-source /root/ccc/setup/functions.sh
-source /root/ccc/setup/modules/nginx.sh
+#!/bin/bash
+# NGINX Installationstest
+
+# Relativer Pfad zur Projektwurzel
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+source "${PROJECT_ROOT}/config/ccc.conf"
+source "${PROJECT_ROOT}/setup/functions.sh"
+source "${PROJECT_ROOT}/setup/modules/nginx.sh"
 
 test_nginx_installation() {
     log_info "Teste NGINX Installation..."
