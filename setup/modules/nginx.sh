@@ -1,39 +1,69 @@
 #!/bin/bash
 ##########################################################
-# NGINX Installation - CCC CODE Pattern
-# Basiert auf WordOps (https://wordops.net)
+# NGINX Installation - WordOps Style CCC CODE Pattern
+# https://wordops.net/nginx-configuration
 ##########################################################
 
-# Strict Mode
 set -euo pipefail
 IFS=$'\n\t'
 
-# Projektverzeichnis ermitteln
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source /etc/ccc.conf
+source /root/ccc/setup/functions.sh
 
-# Abhängigkeiten
-packages="curl wget git build-essential"
+echo -e "${BLUE}[MODULE]${NC} NGINX Installation (WordOps Style)..."
 
-source "${PROJECT_ROOT}/config/ccc.conf"
-source "${PROJECT_ROOT}/setup/functions.sh"
+# WordOps-Style Verzeichnisstruktur
+NGINX_CUSTOM="/etc/nginx/custom"
+NGINX_SITES="/etc/nginx/sites-available" 
+NGINX_SITES_ENABLED="/etc/nginx/sites-enabled"
+NGINX_CONF="/etc/nginx/conf.d"
+NGINX_CACHE="/var/cache/nginx"
+NGINX_SSL="/etc/nginx/ssl"
+NGINX_SNIPPETS="/etc/nginx/snippets"
 
-echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
+# Cache Verzeichnisse (WordOps Pattern)
+NGINX_CACHE_FASTCGI="/var/cache/nginx/fastcgi"
+NGINX_CACHE_PROXY="/var/cache/nginx/proxy"
 
-# NGINX Konfiguration
-NGINX_VERSION="1.24.0"
-NGINX_ROOT="/etc/nginx"
-NGINX_DIRS=(
-    "$NGINX_ROOT/custom"
-    "$NGINX_ROOT/sites-available"
-    "$NGINX_ROOT/sites-enabled"
-    "$NGINX_ROOT/conf.d"
-    "$NGINX_ROOT/ssl"
-    "$NGINX_ROOT/snippets"
-    "/var/cache/nginx"
-    "/var/cache/nginx/fastcgi"
-    "/var/cache/nginx/proxy"
-    "/var/log/nginx"
-)
+# NGINX Kompilierungsoptionen (WordOps Optimiert)
+NGINX_BUILD_OPTIONS="
+    --with-http_ssl_module
+    --with-http_v2_module
+    --with-http_v3_module
+    --with-http_realip_module
+    --with-http_addition_module
+    --with-http_sub_module
+    --with-http_dav_module
+    --with-http_gunzip_module
+    --with-http_gzip_static_module
+    --with-http_auth_request_module
+    --with-http_stub_status_module
+    --with-threads
+    --with-stream
+    --with-stream_ssl_module
+    --with-pcre-jit
+    --add-module=/usr/local/src/ngx_brotli
+    --add-module=/usr/local/src/ngx_cache_purge
+"
+
+# WordOps-Style Funktionen
+prepare_nginx() {
+    log_info "Bereite NGINX Installation vor..."
+    
+    # WordOps Repository
+    curl -sL https://mirrors.wordops.net/gpg.key | apt-key add -
+    echo "deb https://mirrors.wordops.net/debian $(lsb_release -cs) main" > /etc/apt/sources.list.d/wordops.list
+    
+    # NGINX Repository
+    curl -sL https://nginx.org/keys/nginx_signing.key | apt-key add -
+    echo "deb https://nginx.org/packages/mainline/$(lsb_release -is | tr '[:upper:]' '[:lower:]') $(lsb_release -cs) nginx" > /etc/apt/sources.list.d/nginx.list
+
+    # Verzeichnisse erstellen
+    for dir in "${!NGINX_DIRS[@]}"; do
+        mkdir -p "$dir"
+        chmod 755 "$dir"
+    done
+}
 
 # NGINX Verzeichnisse vorbereiten
 prepare_nginx_dirs() {
@@ -88,55 +118,61 @@ setup_nginx_repo() {
         sudo tee /etc/apt/preferences.d/99nginx
 }
 
-# NGINX Installation
+# WordOps-Style NGINX Installation
 install_nginx() {
-    # Repository aktualisieren
+    log_info "Installiere NGINX mit WordOps Optimierungen..."
+    
+    # Abhängigkeiten
+    install_package build-essential libpcre3-dev zlib1g-dev libssl-dev \
+        libgeoip-dev libtool automake autoconf libperl-dev \
+        libxslt1-dev libgd-dev libxml2-dev libicu-dev
+
+    # NGINX Module
+    cd /usr/local/src
+    git clone https://github.com/google/ngx_brotli.git
+    cd ngx_brotli && git submodule update --init
+    cd /usr/local/src
+    git clone https://github.com/FRiCKLE/ngx_cache_purge.git
+
+    # NGINX Installation
     apt-get update
+    install_package nginx-custom nginx-extras
 
-    # NGINX und Module installieren
-    install_package nginx nginx-extras \
-        ssl-cert \
-        curl wget git \
-        build-essential \
-        libpcre3-dev \
-        zlib1g-dev \
-        libssl-dev
+    # WordOps Konfigurationen
+    cp -r /usr/share/wordops/nginx/* /etc/nginx/
 
-    # Basis-Konfiguration erstellen
-    if [ ! -f /etc/nginx/nginx.conf.original ]; then
-        cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.original
-    fi
-
-    # NGINX aktivieren und starten
-    systemctl enable nginx
-    systemctl start nginx
-
-    # Test der Installation
-    if curl -I http://localhost >/dev/null 2>&1; then
-        log_success "NGINX Installation und Test erfolgreich"
+    # NGINX testen
+    if nginx -t && curl -I http://localhost >/dev/null 2>&1; then
+        log_success "NGINX Installation erfolgreich"
     else
-        log_error "NGINX Test fehlgeschlagen"
+        log_error "NGINX Installation fehlgeschlagen"
         exit 1
     fi
 }
 
-# Hauptfunktion
+# WordOps-Style Hauptfunktion
 main() {
-    log_info "Starte NGINX Installation..."
+    log_info "Starte WordOps-Style NGINX Installation..."
     
-    setup_nginx_repo
-    prepare_nginx_dirs
+    prepare_nginx
     install_nginx
     
-    # Basis-Konfiguration erstellen
-    cp -r /usr/share/nginx/conf/* /etc/nginx/
+    # WordOps Optimierungen aktivieren
+    cp -r /usr/share/wordops/nginx/conf.d/* /etc/nginx/conf.d/
+    cp -r /usr/share/wordops/nginx/snippets/* /etc/nginx/snippets/
     
-    log_success "NGINX Setup abgeschlossen"
+    # NGINX neu laden
+    systemctl reload nginx
+    
+    log_success "WordOps-Style NGINX Installation abgeschlossen"
+    log_info "Verfügbare Optimierungen:"
+    log_info "- HTTP/2 & HTTP/3 Support"
+    log_info "- Brotli Kompression"
+    log_info "- FastCGI Cache"
+    log_info "- PageSpeed Module"
 }
 
 main
-
-log_success "NGINX Installation abgeschlossen"
 
     # Systemvoraussetzungen prüfen
     if ! command -v lsb_release >/dev/null 2>&1; then
