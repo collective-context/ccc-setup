@@ -168,7 +168,7 @@ find "$MYSQL_DATA_DIR" -name "*.key" -exec chmod 600 {} \; 2>/dev/null || true
 # Schritt 6: Konfiguration anpassen
 log_info "Konfiguriere MySQL..."
 
-# Custom Konfiguration
+# Custom Konfiguration mit erhöhter Sicherheit
 mkdir -p /etc/mysql/conf.d
 cat > /etc/mysql/conf.d/ccc-code.cnf << MYSQLCCC
 [mysqld]
@@ -185,13 +185,36 @@ max_connections = 100
 character-set-server = utf8mb4
 collation-server = utf8mb4_unicode_ci
 
-# Security & Performance
+# Erweiterte Sicherheitseinstellungen
 skip-name-resolve
 local-infile = 0
+secure-file-priv = /var/lib/mysql-files
+explicit_defaults_for_timestamp = 1
+sql_mode = STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION
+max_allowed_packet = 16M
+
+# Netzwerk-Sicherheit
+bind-address = 127.0.0.1
+max_connect_errors = 10
+connect_timeout = 10
+wait_timeout = 600
+interactive_timeout = 600
+
+# SSL/TLS Konfiguration
+ssl = ON
+ssl-cipher = 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256'
+require_secure_transport = ON
+
+# Logging
+log_error = /var/log/mysql/error.log
+slow_query_log = 1
+slow_query_log_file = /var/log/mysql/slow.log
+long_query_time = 2
 
 [client]
 socket = /var/run/mysqld/mysqld.sock
 default-character-set = utf8mb4
+ssl = ON
 MYSQLCCC
 
 # Schritt 7: AppArmor anpassen (nur wenn verfügbar und aktiv)
