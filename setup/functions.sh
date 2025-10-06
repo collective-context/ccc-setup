@@ -190,33 +190,83 @@ log_error() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1" >> "/var/log/ccc-errors.log"
 }
 
-# Erweiterte Sicherheitsfunktionen
+# Erweiterte Sicherheitsfunktionen mit umfassender Validierung
 check_root() {
+    # Prüfe effektive UID
     if [ "$(id -u)" != "0" ]; then
         log_error "Dieses Script muss als root ausgeführt werden"
         exit 1
     fi
     
-    # Zusätzliche Sicherheitsprüfungen
+    # Zusätzliche Sicherheitsprüfungen für sudo
     if [ -n "$SUDO_USER" ]; then
-        log_warning "Script wurde mit sudo ausgeführt - prüfe Berechtigungen"
+        log_warning "Script wurde mit sudo ausgeführt - führe erweiterte Prüfungen durch"
+        
+        # Prüfe sudo Gruppe
         if ! groups "$SUDO_USER" | grep -qw sudo; then
             log_error "Benutzer $SUDO_USER ist nicht in der sudo Gruppe"
             exit 1
         fi
+        
+        # Prüfe sudo Konfiguration
+        if ! sudo -n true 2>/dev/null; then
+            log_error "Sudo Konfiguration ist nicht korrekt"
+            exit 1
+        fi
     fi
     
-    # Prüfe ob wichtige Verzeichnisse existieren und sicher sind
-    for dir in /root /etc /var/log; do
+    # Umfassende Verzeichnisprüfung
+    for dir in /root /etc /var/log /usr/local/bin /var/lib; do
         if [ ! -d "$dir" ]; then
             log_error "Kritisches Verzeichnis fehlt: $dir"
             exit 1
         fi
+        
+        # Prüfe Berechtigungen
         perms=$(stat -c "%a" "$dir")
-        if [ "$perms" != "700" ] && [ "$perms" != "755" ]; then
-            log_warning "Unsichere Berechtigungen auf: $dir ($perms)"
-        fi
+        owner=$(stat -c "%U" "$dir")
+        group=$(stat -c "%G" "$dir")
+        
+        case "$dir" in
+            /root)
+                if [ "$perms" != "700" ] || [ "$owner" != "root" ]; then
+                    log_error "Unsichere Root-Verzeichnis Berechtigungen: $dir ($perms)"
+                    exit 1
+                fi
+                ;;
+            /etc|/usr/local/bin)
+                if [ "$perms" != "755" ] || [ "$owner" != "root" ]; then
+                    log_warning "Ungewöhnliche Systemverzeichnis Berechtigungen: $dir ($perms)"
+                fi
+                ;;
+            *)
+                if [ "$perms" != "755" ] && [ "$perms" != "750" ]; then
+                    log_warning "Potenziell unsichere Berechtigungen: $dir ($perms)"
+                fi
+                ;;
+        esac
     done
+    
+    # SELinux/AppArmor Check
+    if command -v getenforce >/dev/null 2>&1; then
+        if [ "$(getenforce)" != "Enforcing" ]; then
+            log_warning "SELinux ist nicht im Enforcing Modus"
+        fi
+    fi
+    
+    if command -v aa-status >/dev/null 2>&1; then
+        if ! aa-status --enabled 2>/dev/null; then
+            log_warning "AppArmor ist nicht aktiv"
+        fi
+    fi
+    
+    # Systemintegritätsprüfung
+    if [ ! -f "/etc/shadow" ] || [ ! -f "/etc/passwd" ]; then
+        log_error "Kritische Systemdateien fehlen"
+        exit 1
+    fi
+    
+    log_success "Sicherheitsprüfungen erfolgreich"
 }
 
 secure_directory() {
