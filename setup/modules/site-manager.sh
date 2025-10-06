@@ -29,6 +29,17 @@ site_create() {
     local wp_title="WordPress Site"
     local wp_password=$(openssl rand -base64 12)
 
+    # WordOps-Style Kommandos für PHP-Version
+    for version in 7.4 8.0 8.1 8.2 8.3; do
+        if [ ! -d "/etc/php/$version" ]; then
+            log_info "Installiere PHP $version..."
+            add-apt-repository -y ppa:ondrej/php
+            install_package "php$version-fpm" "php$version-common" "php$version-mysql" \
+                "php$version-xml" "php$version-curl" "php$version-gd" "php$version-zip" \
+                "php$version-mbstring" "php$version-cli" "php$version-opcache"
+        fi
+    done
+
     # WordOps-Style Site Management
     log_info "Erstelle neue Site: $domain"
     
