@@ -2,12 +2,23 @@
 set -euo pipefail
 ##########################################################
 # NGINX Installation - CCC CODE Pattern
+# Inspiriert von WordOps (https://wordops.net)
 ##########################################################
 
 source /etc/ccc.conf
 source /root/ccc/setup/functions.sh
 
 echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
+
+# NGINX Verzeichnisstruktur (WordOps Style)
+NGINX_CUSTOM="/etc/nginx/custom"
+NGINX_SITES="/etc/nginx/sites-available"
+NGINX_SITES_ENABLED="/etc/nginx/sites-enabled" 
+NGINX_CONF="/etc/nginx/conf.d"
+NGINX_CACHE="/var/cache/nginx"
+
+# Verzeichnisse erstellen
+mkdir -p $NGINX_CUSTOM $NGINX_SITES $NGINX_SITES_ENABLED $NGINX_CONF $NGINX_CACHE
 
 # NGINX installieren mit idempotenter Funktion
 install_package nginx
