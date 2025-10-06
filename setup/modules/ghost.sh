@@ -41,15 +41,21 @@ if [ -f "$GHOST_DIR/index.js" ]; then
 else
     log_info "Neue Ghost Installation in $GHOST_DIR..."
     
-    # Ghost installieren als Storage User
+    # Prüfe Node.js-Abhängigkeit vor Installation
+    if ! command -v node &> /dev/null; then
+        log_error "Node.js ist nicht installiert"
+        exit 1
+    fi
+
+    # Ghost installieren als Storage User (idempotent)
     cd "$GHOST_DIR"
-    chown -R "$GHOST_USER:$GHOST_GROUP" .
-    
+    [ -d "content" ] && chown -R "$GHOST_USER:$GHOST_GROUP" content
+
     sudo -u "$GHOST_USER" -i -- <<EOF
 cd "$GHOST_DIR"
 
-# Ghost installieren (non-interactive)
-ghost install \
+# Idempotente Ghost-Installation
+[ -d "versions" ] && ghost update --force || ghost install \
   --db mysql \
   --dbhost localhost \
   --dbuser "$DB_USER" \
