@@ -2,13 +2,43 @@
 set -euo pipefail
 ##########################################################
 # NGINX Installation - CCC CODE Pattern
-# Inspiriert von WordOps (https://wordops.net)
+# Basiert auf WordOps (https://wordops.net)
 ##########################################################
 
 source /etc/ccc.conf
 source /root/ccc/setup/functions.sh
 
 echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
+
+# NGINX Version und Build-Optionen (WordOps-Style)
+NGINX_VERSION="1.28.0"
+NGINX_EXTRA_OPTIONS="
+    --with-http_ssl_module 
+    --with-http_v2_module
+    --with-http_v3_module
+    --with-http_realip_module
+    --with-http_addition_module
+    --with-http_sub_module
+    --with-http_dav_module
+    --with-http_flv_module
+    --with-http_mp4_module
+    --with-http_gunzip_module
+    --with-http_gzip_static_module
+    --with-http_auth_request_module
+    --with-http_random_index_module
+    --with-http_secure_link_module
+    --with-http_stub_status_module
+    --with-http_slice_module
+    --with-threads
+    --with-stream
+    --with-stream_ssl_module
+    --with-stream_realip_module
+    --with-stream_ssl_preread_module
+    --with-pcre-jit
+    --with-zlib=/usr/local/src/zlib
+    --with-openssl=/usr/local/src/openssl
+    --add-module=/usr/local/src/ngx_brotli
+"
 
 # NGINX Verzeichnisstruktur (WordOps-inspiriert)
 NGINX_CUSTOM="/etc/nginx/custom"
