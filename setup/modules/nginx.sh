@@ -10,12 +10,18 @@ source /root/ccc/setup/functions.sh
 
 echo -e "${BLUE}[MODULE]${NC} NGINX Installation (CCC CODE Style)..."
 
-# NGINX Verzeichnisstruktur (WordOps Style)
+# NGINX Verzeichnisstruktur (WordOps-inspiriert)
 NGINX_CUSTOM="/etc/nginx/custom"
 NGINX_SITES="/etc/nginx/sites-available"
 NGINX_SITES_ENABLED="/etc/nginx/sites-enabled" 
 NGINX_CONF="/etc/nginx/conf.d"
 NGINX_CACHE="/var/cache/nginx"
+NGINX_SSL="/etc/nginx/ssl"
+NGINX_SNIPPETS="/etc/nginx/snippets"
+
+# Cache Verzeichnisse
+NGINX_CACHE_FASTCGI="/var/cache/nginx/fastcgi"
+NGINX_CACHE_PROXY="/var/cache/nginx/proxy"
 
 # Verzeichnisse erstellen
 mkdir -p $NGINX_CUSTOM $NGINX_SITES $NGINX_SITES_ENABLED $NGINX_CONF $NGINX_CACHE
