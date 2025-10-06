@@ -26,10 +26,14 @@ NGINX_SNIPPETS="/etc/nginx/snippets"
 NGINX_CACHE_FASTCGI="/var/cache/nginx/fastcgi"
 NGINX_CACHE_PROXY="/var/cache/nginx/proxy"
 
-# Verzeichnisse erstellen
-mkdir -p "$NGINX_CUSTOM" "$NGINX_SITES" "$NGINX_SITES_ENABLED" \
-         "$NGINX_CONF" "$NGINX_CACHE" "$NGINX_SSL" "$NGINX_SNIPPETS" \
-         "$NGINX_CACHE_FASTCGI" "$NGINX_CACHE_PROXY"
+# Verzeichnisse erstellen und Berechtigungen setzen
+for dir in "$NGINX_CUSTOM" "$NGINX_SITES" "$NGINX_SITES_ENABLED" \
+           "$NGINX_CONF" "$NGINX_CACHE" "$NGINX_SSL" "$NGINX_SNIPPETS" \
+           "$NGINX_CACHE_FASTCGI" "$NGINX_CACHE_PROXY"; do
+    mkdir -p "$dir"
+    chown root:root "$dir"
+    chmod 755 "$dir"
+done
 
 # NGINX Repository Setup
 if [ ! -f /etc/apt/sources.list.d/nginx.list ]; then
