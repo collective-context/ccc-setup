@@ -62,6 +62,11 @@ test_nginx_installation() {
         log_warning "Brotli Modul nicht kompiliert"
     fi
     
+    # Prüfe PageSpeed Modul
+    if ! nginx -V 2>&1 | grep -q "ngx_pagespeed"; then
+        log_warning "PageSpeed Modul nicht kompiliert"
+    fi
+    
     log_success "NGINX Tests erfolgreich"
     return 0
 }
