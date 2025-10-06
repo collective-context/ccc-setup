@@ -168,48 +168,75 @@ find "$MYSQL_DATA_DIR" -name "*.key" -exec chmod 600 {} \; 2>/dev/null || true
 # Schritt 6: Konfiguration anpassen
 log_info "Konfiguriere MySQL..."
 
-# Custom Konfiguration mit erhöhter Sicherheit
+# Erweiterte MySQL Sicherheitskonfiguration
 mkdir -p /etc/mysql/conf.d
 cat > /etc/mysql/conf.d/ccc-code.cnf << MYSQLCCC
 [mysqld]
-# CCC CODE Pattern: Daten in Storage Root
+# CCC CODE Pattern: Daten in Storage Root mit erhöhter Sicherheit
 datadir = /var/lib/mysql
 socket = /var/run/mysqld/mysqld.sock
 
-# Performance Optimierungen
+# Performance & Sicherheitsoptimierungen
 innodb_buffer_pool_size = 256M
 innodb_log_file_size = 128M
 max_connections = 100
+max_user_connections = 50
+thread_cache_size = 128
 
-# UTF-8 Settings
+# UTF-8 Settings mit Sicherheitsvalidierung
 character-set-server = utf8mb4
 collation-server = utf8mb4_unicode_ci
+character_set_client = utf8mb4
 
 # Erweiterte Sicherheitseinstellungen
 skip-name-resolve
 local-infile = 0
 secure-file-priv = /var/lib/mysql-files
 explicit_defaults_for_timestamp = 1
-sql_mode = STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION
+sql_mode = STRICT_ALL_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO
 max_allowed_packet = 16M
+skip-symbolic-links
+block_encryption_mode = 'aes-256-cbc'
 
 # Netzwerk-Sicherheit
 bind-address = 127.0.0.1
-max_connect_errors = 10
-connect_timeout = 10
-wait_timeout = 600
-interactive_timeout = 600
+max_connect_errors = 5
+connect_timeout = 5
+wait_timeout = 300
+interactive_timeout = 300
+max_connections_per_hour = 100
+max_questions_per_hour = 1000
+max_updates_per_hour = 500
 
-# SSL/TLS Konfiguration
+# SSL/TLS Konfiguration mit stärkerer Verschlüsselung
 ssl = ON
-ssl-cipher = 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256'
+ssl-cipher = 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305'
 require_secure_transport = ON
+ssl_cert = /var/lib/mysql-files/server-cert.pem
+ssl_key = /var/lib/mysql-files/server-key.pem
+tls_version = TLSv1.2,TLSv1.3
 
-# Logging
+# Erweiterte Logging und Auditing
 log_error = /var/log/mysql/error.log
 slow_query_log = 1
 slow_query_log_file = /var/log/mysql/slow.log
 long_query_time = 2
+log_queries_not_using_indexes = 1
+log_throttle_queries_not_using_indexes = 60
+log_slow_admin_statements = 1
+log_slow_slave_statements = 1
+log_bin = /var/log/mysql/mysql-bin.log
+expire_logs_days = 14
+sync_binlog = 1
+
+# InnoDB Sicherheitsoptimierungen
+innodb_strict_mode = 1
+innodb_file_per_table = 1
+innodb_rollback_on_timeout = 1
+innodb_flush_log_at_trx_commit = 1
+innodb_max_dirty_pages_pct = 90
+innodb_lock_wait_timeout = 50
+innodb_old_blocks_time = 1000
 
 [client]
 socket = /var/run/mysqld/mysqld.sock
