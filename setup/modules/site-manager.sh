@@ -23,6 +23,24 @@ site_create() {
     local cache_type=""
     local site_type=""
     
+    # Parameter validieren
+    if [ "$#" -lt 1 ]; then
+        log_error "Verwendung: ccc site create <domain> [--php <version>] [--ssl] [--wp|--html|--php]"
+        return 1
+    fi
+
+    # Domain validieren
+    if [[ ! "$domain" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$ ]]; then
+        log_error "Ungültige Domain: $domain"
+        return 1
+    fi
+
+    # Prüfen ob Domain bereits existiert
+    if [ -f "$SITES_AVAILABLE/$domain" ]; then
+        log_error "Site $domain existiert bereits"
+        return 1
+    fi
+    
     # Parameter parsen (WordOps-Style)
     while [[ $# -gt 0 ]]; do
         case $1 in
