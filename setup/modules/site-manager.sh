@@ -28,6 +28,54 @@ site_create() {
     local wp_email="$ADMIN_EMAIL"
     local wp_title="WordPress Site"
     local wp_password=$(openssl rand -base64 12)
+
+    # WordOps-Style Kommandos
+    case "$1" in
+        --html)
+            site_type="html"
+            shift
+            ;;
+        --php*)
+            site_type="php"
+            php_version="${1#--php}"
+            shift
+            ;;
+        --mysql)
+            site_type="mysql"
+            shift
+            ;;
+        --wp)
+            site_type="wordpress"
+            shift
+            ;;
+        --wpsubdir)
+            site_type="wordpress"
+            wp_type="subdir"
+            shift
+            ;;
+        --wpsubdomain)
+            site_type="wordpress"
+            wp_type="subdomain"
+            shift
+            ;;
+        --wpfc)
+            cache_type="fastcgi"
+            shift
+            ;;
+        --wpredis)
+            cache_type="redis"
+            shift
+            ;;
+        --wpsc)
+            cache_type="supercache"
+            shift
+            ;;
+        --proxy=*)
+            site_type="proxy"
+            proxy_url="${1#*=}"
+            shift
+            ;;
+    esac
     
     # WordOps-Style Site Management
     log_info "Erstelle neue Site: $domain"
