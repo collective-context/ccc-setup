@@ -20,10 +20,36 @@ mkdir -p "$SITES_AVAILABLE" "$SITES_ENABLED" "$NGINX_CUSTOM"
 
 # Site Management Funktionen
 site_create() {
+    # Parameter validieren
     if [ "$#" -lt 1 ]; then
-        log_error "Verwendung: site_create <domain> [options]"
+        log_error "Verwendung: site_create <domain> [--php <version>] [--ssl]"
         return 1
     }
+
+    # Variablen initialisieren
+    local domain=""
+    local php_version="8.3"
+    local use_ssl=0
+    
+    # Parameter parsen
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --php)
+                php_version="$2"
+                shift 2
+                ;;
+            --ssl)
+                use_ssl=1
+                shift
+                ;;
+            *)
+                if [ -z "$domain" ]; then
+                    domain="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
 
     local domain="$1"
     shift
