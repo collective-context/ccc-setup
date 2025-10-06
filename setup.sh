@@ -73,8 +73,8 @@ else
     # Standardwerte setzen
     export PRIMARY_HOSTNAME=$(hostname -f 2>/dev/null || hostname || echo "localhost")
     export ADMIN_EMAIL="admin@${PRIMARY_HOSTNAME}"
-    export INSTALL_MODE="dev"
-    export INSTALL_COMPONENTS="tmux,aider,mcp,fastmcp,langgraph,libtmux"
+    export INSTALL_MODE="nginx"
+    export INSTALL_COMPONENTS="nginx"
     
     log_info "Verwende Standardwerte:"
     log_info "  Hostname: $PRIMARY_HOSTNAME"
