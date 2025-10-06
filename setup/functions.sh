@@ -33,26 +33,79 @@ log_success() { log OK "$*"; }
 log_error() { log ERROR "$*"; }
 log_warning() { log WARN "$*"; }
 
-# Idempotente Paketinstallation
+# Sichere und idempotente Paketinstallation mit Fehlerbehandlung
 install_package() {
+    local exit_code=0
     for pkg in "$@"; do
-        if dpkg -s "$pkg" >/dev/null 2>&1; then
-            log_info "$pkg ist bereits installiert"
-        else
+        if ! dpkg -s "$pkg" >/dev/null 2>&1; then
             log_info "Installiere $pkg..."
-            DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            if ! DEBIAN_FRONTEND=noninteractive apt-get install -y \
                 -qq -o Dpkg::Options::="--force-confold" \
-                --no-install-recommends "$pkg"
+                --no-install-recommends "$pkg"; then
+                log_error "Installation von $pkg fehlgeschlagen"
+                exit_code=1
+                continue
+            fi
+        else
+            log_info "$pkg ist bereits installiert"
+            # Prüfe ob das Paket korrekt installiert ist
+            if ! dpkg -l "$pkg" | grep -q '^ii'; then
+                log_error "$pkg ist beschädigt oder nur teilweise installiert"
+                exit_code=1
+            fi
         fi
     done
+    return $exit_code
 }
 
+# Erweiterte Logging-Funktionen mit Sicherheitsrelevanz
 log_success() {
     echo -e "${GREEN}[OK]${NC} $1"
+    logger -t "ccc-setup" "[SUCCESS] $1"
 }
 
 log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+    logger -t "ccc-setup" "[ERROR] $1"
+    # Fehler in separate Datei loggen
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1" >> "/var/log/ccc-errors.log"
+}
+
+# Neue Sicherheitsfunktionen
+check_root() {
+    if [ "$(id -u)" != "0" ]; then
+        log_error "Dieses Script muss als root ausgeführt werden"
+        exit 1
+    fi
+}
+
+secure_directory() {
+    local dir="$1"
+    local owner="${2:-root}"
+    local group="${3:-root}"
+    local perms="${4:-750}"
+    
+    if [ ! -d "$dir" ]; then
+        mkdir -p "$dir"
+    fi
+    
+    chown "$owner:$group" "$dir"
+    chmod "$perms" "$dir"
+    
+    # Setze sichere Verzeichnisattribute
+    if command -v chattr >/dev/null 2>&1; then
+        chattr +a "$dir" 2>/dev/null || true  # Nur anhängen erlauben
+    fi
+}
+
+validate_input() {
+    local input="$1"
+    local pattern="$2"
+    if [[ ! "$input" =~ $pattern ]]; then
+        log_error "Ungültige Eingabe: $input"
+        return 1
+    fi
+    return 0
 }
 
 log_warning() {
