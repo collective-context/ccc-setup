@@ -27,6 +27,15 @@ NGINX_CACHE_FASTCGI="/var/cache/nginx/fastcgi"
 NGINX_CACHE_PROXY="/var/cache/nginx/proxy"
 NGINX_LOG="/var/log/nginx"
 
+# Verzeichnisse erstellen und Berechtigungen setzen
+for dir in "$NGINX_CUSTOM" "$NGINX_SITES" "$NGINX_SITES_ENABLED" \
+           "$NGINX_CONF" "$NGINX_CACHE" "$NGINX_SSL" "$NGINX_SNIPPETS" \
+           "$NGINX_CACHE_FASTCGI" "$NGINX_CACHE_PROXY" "$NGINX_LOG"; do
+    mkdir -p "$dir"
+    chown root:root "$dir"
+    chmod 755 "$dir"
+done
+
 # Systemvoraussetzungen prüfen
 if ! command -v lsb_release >/dev/null 2>&1; then
     log_info "Installiere lsb-release..."
