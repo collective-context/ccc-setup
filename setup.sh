@@ -20,11 +20,23 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-# Logging Funktionen
-log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
-log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
-log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
-log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+# Logging Funktionen mit Test-Modus
+log_info() { 
+    echo -e "${BLUE}[INFO]${NC} $1"
+    [ "$TEST_MODE" = "true" ] && echo "[TEST] $1" >> "$LOG_FILE"
+}
+log_success() { 
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    [ "$TEST_MODE" = "true" ] && echo "[TEST-SUCCESS] $1" >> "$LOG_FILE"
+}
+log_warning() { 
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+    [ "$TEST_MODE" = "true" ] && echo "[TEST-WARNING] $1" >> "$LOG_FILE"
+}
+log_error() { 
+    echo -e "${RED}[ERROR]${NC} $1"
+    [ "$TEST_MODE" = "true" ] && echo "[TEST-ERROR] $1" >> "$LOG_FILE"
+}
 
 # Banner anzeigen
 echo -e "${GREEN}"
