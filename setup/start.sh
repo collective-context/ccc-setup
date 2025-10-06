@@ -58,14 +58,15 @@ fi
 # Fragen nur im interaktiven Modus
 if [ $NON_INTERACTIVE -eq 0 ]; then
     source questions.sh
+    log_info "questions.sh geladen"
     ask_questions
+    log_info "Fragen abgeschlossen"
 else
-    # Im nicht-interaktiven Modus: Logging der verwendeten Werte
-    echo -e "${GREEN}[INFO]${NC} Verwende Standard-Konfiguration:"
-    echo "  Hostname: $PRIMARY_HOSTNAME"
-    echo "  Admin Email: $ADMIN_EMAIL" 
-    echo "  Modus: $INSTALL_MODE"
-    echo "  Komponenten: $INSTALL_COMPONENTS"
+    log_info "Verwende Standard-Konfiguration:"
+    log_info "  Hostname: $PRIMARY_HOSTNAME"
+    log_info "  Admin Email: $ADMIN_EMAIL" 
+    log_info "  Modus: $INSTALL_MODE"
+    log_info "  Komponenten: $INSTALL_COMPONENTS"
     
     # Zusätzliche Variablen setzen die in questions.sh gesetzt werden
     PUBLIC_IP=$(curl -s http://checkip.amazonaws.com || echo "127.0.0.1")
@@ -82,13 +83,13 @@ STORAGE_ROOT=${STORAGE_ROOT:-/home/user-data}
 
 # Storage User erstellen wenn nötig
 if ! id -u $STORAGE_USER > /dev/null 2>&1; then
-    echo -e "${BLUE}[INFO]${NC} Erstelle Storage User: $STORAGE_USER"
+    log_info "Erstelle Storage User: $STORAGE_USER"
     useradd -m -s /bin/bash -d /home/$STORAGE_USER $STORAGE_USER
 fi
 
 # Storage Root erstellen - DAS HERZSTÜCK VON CCC CODE!
 if [ ! -d "$STORAGE_ROOT" ]; then
-    echo -e "${BLUE}[INFO]${NC} Erstelle Storage Root: $STORAGE_ROOT"
+    log_info "Erstelle Storage Root: $STORAGE_ROOT"
     mkdir -p $STORAGE_ROOT
     chown $STORAGE_USER:$STORAGE_USER $STORAGE_ROOT
     chmod 750 $STORAGE_ROOT
@@ -97,6 +98,7 @@ if [ ! -d "$STORAGE_ROOT" ]; then
     mkdir -p $STORAGE_ROOT/{mysql,www,nginx,ssl,backups,config,logs,tools}
     chown -R $STORAGE_USER:$STORAGE_USER $STORAGE_ROOT
 fi
+log_info "Storage Root eingerichtet"
 
 # Konfiguration speichern (CCC CODE's /etc/ccc.conf)
 cat > /etc/ccc.conf << EOF
@@ -114,6 +116,7 @@ DB_PASS=$DB_PASS
 ADMIN_EMAIL=$ADMIN_EMAIL
 INSTALL_COMPONENTS=$INSTALL_COMPONENTS
 EOF
+log_info "Konfiguration gespeichert"
 
 # Installationsfortschritt
 log_info "Starte modulare Installation..."
