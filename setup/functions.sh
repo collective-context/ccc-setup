@@ -12,12 +12,12 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Erweiterte Sicherheits-Konfiguration
-readonly LOG_FILE="/var/log/ccc-setup.log"
-readonly ERROR_LOG="/var/log/ccc-errors.log"
-readonly AUDIT_LOG="/var/log/ccc-audit.log"
-readonly SECURITY_LOG="/var/log/ccc-security.log"
-readonly INCIDENT_LOG="/var/log/ccc-incident.log"
+# Erweiterte Sicherheits-Konfiguration (ohne readonly für Log-Dateipfade!)
+LOG_FILE="/var/log/ccc-setup.log"
+ERROR_LOG="/var/log/ccc-errors.log"
+AUDIT_LOG="/var/log/ccc-audit.log"
+SECURITY_LOG="/var/log/ccc-security.log"
+INCIDENT_LOG="/var/log/ccc-incident.log"
 readonly MAX_RETRIES=3
 readonly SECURE_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 readonly SECURE_UMASK=0027
@@ -193,10 +193,22 @@ install_package() {
     return $exit_code
 }
 
-# Log-Verzeichnis erstellen
-mkdir -p /var/log/ccc
-chown root:adm /var/log/ccc
-chmod 750 /var/log/ccc
+# Konsistente Verzeichnisse für alle Logs erstellen
+log_dirs=(
+    "/var/log/ccc"
+    "$(dirname "$LOG_FILE")"
+    "$(dirname "$ERROR_LOG")"
+    "$(dirname "$AUDIT_LOG")"
+    "$(dirname "$SECURITY_LOG")"
+    "$(dirname "$INCIDENT_LOG")"
+)
+
+for dir in "${log_dirs[@]}"; do
+    [[ "$dir" == "/var/log" ]] && continue  # Hauptverzeichnis braucht keine Änderung
+    [[ ! -d "$dir" ]] && mkdir -p "$dir"
+    chown root:adm "$dir"
+    chmod 750 "$dir"
+done
 
 # Logging Funktionen mit Test-Modus
 log_info() { 
