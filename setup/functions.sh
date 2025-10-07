@@ -193,6 +193,11 @@ install_package() {
     return $exit_code
 }
 
+# Log-Verzeichnis erstellen
+mkdir -p /var/log/ccc
+chown root:adm /var/log/ccc
+chmod 750 /var/log/ccc
+
 # Logging Funktionen mit Test-Modus
 log_info() { 
     echo -e "${BLUE}[INFO]${NC} $1"
