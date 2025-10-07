@@ -118,8 +118,13 @@ setup_nginx_repo() {
         sudo tee /etc/apt/preferences.d/99nginx
 }
 
-# WordOps-Style NGINX Installation
+# Idempotente NGINX Installation
 install_nginx() {
+    if command -v nginx >/dev/null 2>&1; then
+        log_info "NGINX ist bereits installiert - Überspringe Installation"
+        return 0
+    fi
+    
     log_info "Installiere NGINX mit WordOps Optimierungen..."
     
     # Abhängigkeiten
@@ -127,12 +132,17 @@ install_nginx() {
         libgeoip-dev libtool automake autoconf libperl-dev \
         libxslt1-dev libgd-dev libxml2-dev libicu-dev
 
-    # NGINX Module
-    cd /usr/local/src
-    git clone https://github.com/google/ngx_brotli.git
-    cd ngx_brotli && git submodule update --init
-    cd /usr/local/src
-    git clone https://github.com/FRiCKLE/ngx_cache_purge.git
+    # NGINX Module nur bei Erstinstallation
+    if [ ! -d "/usr/local/src/ngx_brotli" ]; then
+        cd /usr/local/src
+        git clone https://github.com/google/ngx_brotli.git
+        cd ngx_brotli && git submodule update --init
+    fi
+    
+    if [ ! -d "/usr/local/src/ngx_cache_purge" ]; then
+        cd /usr/local/src
+        git clone https://github.com/FRiCKLE/ngx_cache_purge.git
+    fi
 
     # NGINX Installation
     apt-get update

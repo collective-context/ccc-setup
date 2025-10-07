@@ -13,16 +13,16 @@ echo -e "${BLUE}[MODULE]${NC} MySQL 8 Installation (CCC CODE Style - Mit Passwor
 MYSQL_DATA_DIR="$STORAGE_ROOT/mysql"
 MYSQL_RUN_DIR="/var/run/mysqld"
 
-# MySQL Root Password setzen/lesen
+# MySQL Root Password setzen/lesen mit Validierung
 if [ -z "$DB_ROOT_PASS" ]; then
     if [ -f "$STORAGE_ROOT/mysql/root-pass.txt" ]; then
         DB_ROOT_PASS=$(cat "$STORAGE_ROOT/mysql/root-pass.txt")
     else
-        DB_ROOT_PASS=$(openssl rand -base64 32)
+        DB_ROOT_PASS=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9!@#$%^&*()_+-=' | head -c 32)
         mkdir -p "$STORAGE_ROOT/mysql"
         echo "$DB_ROOT_PASS" > "$STORAGE_ROOT/mysql/root-pass.txt"
-        chmod 660 "$STORAGE_ROOT/mysql/root-pass.txt"
-        log_info "MySQL Root-Passwort generiert und gespeichert"
+        chmod 600 "$STORAGE_ROOT/mysql/root-pass.txt"
+        log_info "Sicheres MySQL Root-Passwort generiert und gespeichert"
     fi
 fi
 

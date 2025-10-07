@@ -199,9 +199,12 @@ site_create() {
         setup_ssl "$domain"
     fi
 
-    # WordPress Installation wenn gewünscht
+    # WordPress Installation mit Fehlerbehandlung
     if [[ "$site_type" == "wordpress"* ]]; then
-        install_wordpress "$domain" "$wp_type" "$cache_type"
+        if ! install_wordpress "$domain" "$wp_type" "$cache_type"; then
+            log_error "WordPress-Installation für $domain fehlgeschlagen"
+            return 1
+        fi
     fi
 
     # WordOps-Style CLI Interface
