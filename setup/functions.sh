@@ -201,23 +201,23 @@ chmod 750 /var/log/ccc
 # Logging Funktionen mit Test-Modus
 log_info() { 
     echo -e "${BLUE}[INFO]${NC} $1"
-    echo "[INFO] $1" >> "/var/log/ccc/setup.log"
-    [ "$TEST_MODE" = "true" ] && echo "[TEST] $1" >> "$LOG_FILE"
+    echo "[INFO] $(date +%Y-%m-%d\ %H:%M:%S) $1" >> "/var/log/ccc/setup.log"
+    [ "${TEST_MODE:-false}" = "true" ] && echo "[TEST] $1" >> "$LOG_FILE"
 }
 log_success() { 
     echo -e "${GREEN}[SUCCESS]${NC} $1"
-    echo "[SUCCESS] $1" >> "/var/log/ccc/setup.log"
-    [ "$TEST_MODE" = "true" ] && echo "[TEST-SUCCESS] $1" >> "$LOG_FILE"
+    echo "[SUCCESS] $(date +%Y-%m-%d\ %H:%M:%S) $1" >> "/var/log/ccc/setup.log"
+    [ "${TEST_MODE:-false}" = "true" ] && echo "[TEST-SUCCESS] $1" >> "$LOG_FILE"
 }
 log_warning() { 
     echo -e "${YELLOW}[WARNING]${NC} $1"
-    echo "[WARNING] $1" >> "/var/log/ccc/setup.log"
-    [ "$TEST_MODE" = "true" ] && echo "[TEST-WARNING] $1" >> "$LOG_FILE"
+    echo "[WARNING] $(date +%Y-%m-%d\ %H:%M:%S) $1" >> "/var/log/ccc/setup.log"
+    [ "${TEST_MODE:-false}" = "true" ] && echo "[TEST-WARNING] $1" >> "$LOG_FILE"
 }
 log_error() { 
     echo -e "${RED}[ERROR]${NC} $1"
-    echo "[ERROR] $1" >> "/var/log/ccc/setup.log"
-    [ "$TEST_MODE" = "true" ] && echo "[TEST-ERROR] $1" >> "$LOG_FILE"
+    echo "[ERROR] $(date +%Y-%m-%d\ %H:%M:%S) $1" >> "/var/log/ccc/setup.log"
+    [ "${TEST_MODE:-false}" = "true" ] && echo "[TEST-ERROR] $1" >> "$LOG_FILE"
 }
 
 # Log-Verzeichnis erstellen
