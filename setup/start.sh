@@ -55,6 +55,10 @@ else
     FIRST_TIME_SETUP=1
 fi
 
+# ✅✅✅ CCC CODE MAGIE: User-Data Verzeichnis erstellen ✅✅✅
+STORAGE_USER=${STORAGE_USER:-ccc-data}
+STORAGE_ROOT=${STORAGE_ROOT:-/home/user-data}
+
 # Fragen nur im interaktiven Modus
 if [ $NON_INTERACTIVE -eq 0 ]; then
     source questions.sh

@@ -89,7 +89,7 @@ error_handler() {
     } >> "$ERROR_LOG"
     
     # Automatisches Backup und Wiederherstellung
-    if [ -d "${STORAGE_ROOT:-}" ]; then
+    if [ -d "${STORAGE_ROOT:-/home/user-data}" ]; then
         echo -e "${YELLOW}[WARN]${NC} Erstelle Notfall-Backup..." >&2
         
         # Backup mit Zeitstempel
