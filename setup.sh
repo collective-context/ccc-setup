@@ -77,23 +77,23 @@ echo -e "${NC}"
 
 # CCC Repository herunterladen oder aktualisieren
 if [ ! -d "/root/ccc" ]; then
-    echo -e "${BLUE}[INFO]${NC} Lade CCC Commander herunter..."
+    log_info "Lade CCC Commander herunter..."
     # Verzeichnis erstellen falls es nicht existiert
     mkdir -p /root/ccc
     
     # Repository klonen
     if git clone https://github.com/collective-context/ccc-setup.git /root/ccc; then
-        echo -e "${GREEN}[OK]${NC} Download erfolgreich"
+        log_success "Download erfolgreich"
         # Ausführbare Rechte setzen
         chmod 700 /root/ccc/setup.sh
         chmod 700 /root/ccc/setup/*.sh
         chmod 700 /root/ccc/setup/modules/*.sh
     else
-        echo -e "${RED}[ERROR]${NC} Download fehlgeschlagen"
+        log_error "Download fehlgeschlagen"
         exit 1
     fi
 else
-    echo -e "${BLUE}[INFO]${NC} CCC Repository existiert bereits - aktualisiere..."
+    log_info "CCC Repository existiert bereits - aktualisiere..."
     cd /root/ccc && git pull origin main
     # Ausführbare Rechte erneuern
     chmod 700 /root/ccc/setup.sh
@@ -168,3 +168,4 @@ else
     # Führe start.sh im nicht-interaktiven Modus aus
     ./start.sh --non-interactive
 fi
+log_info "Setup abgeschlossen"
